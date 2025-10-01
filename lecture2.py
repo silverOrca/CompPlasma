@@ -6,7 +6,7 @@ Created on Tue Sep 30 09:38:54 2025
 
 Lecture 2
 
-Code for solving dy/dt = 10 * y
+Code for solving dy/dt = 10 * y explicitly
 
 y(t) = y(t=0) * exp(a*t)
 """
@@ -32,7 +32,8 @@ nsteps = 101
 
 #Implement the method
 
-#Work out time step - how far we are going in time / steps
+#Work out time element - how far we are going in time / steps
+#more steps means time element is smaller, more accurate results
 dt = (t_final - t0) / nsteps
 
 #want to store the solution at each step - list. We have initial
@@ -40,14 +41,16 @@ dt = (t_final - t0) / nsteps
 solution = [y0]
 time = [t0]
 
-analytic_solution = [y0 * exp(a_coefficient *time[0])]
+#this is the true solution to compare to our computational solution
+analytic_solution = [y0 * exp(a_coefficient * time[0])]
 
-#loop over the steps
+#loop over the steps to calculate values at each dt
 for i in range(nsteps):
+    #go to last value in list to calculate from that the value that should be next
     y_current = solution[-1]
-    #next value is last thing in list +
+    #next value is last thing in list + next step amount
     #taken step of dt and multiplying by rate, linear extrapolation
-    y_next = y_current + dt * a_coefficient * y_current #dy/dt = a_coefficientefficient * y
+    y_next = y_current + (dt * a_coefficient * y_current) #dy/dt = a_coefficient * y
     
     #use append to add new values to lists
     solution.append(y_next)
@@ -67,6 +70,6 @@ plt.legend(loc = 'best')
 plt.show()
 
 
-
-
+#instead, could define step size and while loop until the time reaches the max time
+#where each iteration increments the time by one step size
 

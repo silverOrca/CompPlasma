@@ -74,10 +74,10 @@ line_ani = ani.FuncAnimation(fig1, update_lines, len(t),
            fargs=(result.y, line1, line2, 5),
            interval=5, blit=False, repeat=True)
 
-#code from
-writergif = ani.PillowWriter(fps=30)
+#code from stack overflow
+writergif = ani.PillowWriter(fps=100)
 #Uncomment the below line to get a movie generated to file
-line_ani.save('pcles.gif')
+line_ani.save('pcles2.gif')
 
 #Actually show animation
 plt.show()

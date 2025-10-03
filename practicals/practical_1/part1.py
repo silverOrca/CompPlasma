@@ -4,7 +4,7 @@ Created on Thu Oct  2 15:10:56 2025
 
 @author: zks524
 
-Code for hardcoded value of dy/dt function
+Code for hardcoded value of dy/dt function where dy/dt = -ay
 """
 
 from scipy.integrate import solve_ivp

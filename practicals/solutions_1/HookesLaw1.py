@@ -34,13 +34,13 @@ plt.xlabel('Time'); plt.ylabel("x and v") ; plt.legend(loc='best') ; plt.show()
 
 #Energy plot -- Uncomment the below to produce plot (comment out above plots)
 ##Define a function that returns the kinetic, potential and total energy
-#def getEnergy(x,v,k,mass):
-#    kE=0.5*mass*v*v ; pE=0.5*k*x*x ; tE=kE+pE
-#    return kE,pE,tE
+def getEnergy(x,v,k,mass):
+    kE=0.5*mass*v*v ; pE=0.5*k*x*x ; tE=kE+pE
+    return kE,pE,tE
 
-#ke,pe,te=getEnergy(x_of_t,v_of_t,k,mass)
-#plt.plot(time,ke,label="Kinetic energy")
-#plt.plot(time,pe,label="Potential energy")
-#plt.plot(time,te,label="Total energy")
-#plt.xlabel('Time'); plt.ylabel("Energy")
-#plt.legend(loc='best') ; plt.show()
+ke,pe,te=getEnergy(x_of_t,v_of_t,k,mass)
+plt.plot(time,ke,label="Kinetic energy")
+plt.plot(time,pe,label="Potential energy")
+plt.plot(time,te,label="Total energy")
+plt.xlabel('Time'); plt.ylabel("Energy")
+plt.legend(loc='best') ; plt.show()

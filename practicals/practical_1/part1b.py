@@ -23,6 +23,6 @@ result = solve_ivp(dfdt, [time[0], time[-1]], f0, t_eval=time)
 
 plt.plot(time, result.y[0,:], label = 'a function!')
 
-plt.xlabel ('Time'); plt . ylabel ("f")
-plt.legend () ; plt.show ()
+plt.xlabel ('Time'); plt.ylabel ("f")
+plt.legend (); plt.show ()
 

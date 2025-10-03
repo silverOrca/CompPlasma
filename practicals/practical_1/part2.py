@@ -12,7 +12,7 @@ Hooke's law code
 
 
 from scipy.integrate import solve_ivp
-from numpy import linspace, exp
+from numpy import linspace
 import matplotlib.pyplot as plt
 
 #define Hooke's law function

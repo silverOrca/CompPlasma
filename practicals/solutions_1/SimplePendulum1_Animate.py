@@ -52,4 +52,8 @@ def drawPendulum(num,res,l1,l2,length=1):
 line_ani = ani.FuncAnimation(fig1,drawPendulum,len(time),
     fargs=(result.y,line1[0],line2[0],length),
     interval=50, blit=False, repeat=False)
+
+#writergif=ani.PillowWriter(fps=50)
+#line_ani.save('pendulum.gif')
+
 plt.show()

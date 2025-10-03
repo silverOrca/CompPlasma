@@ -8,8 +8,8 @@ Simple pendulum
 """
 #Equation is d^2theta/dt^2 = -g/l sin(theta)
 #define first an equation to make this first order
-#F = -mgsin(theta) = ma, and a = l d^2theta/dt^2
-#So we can define a = dv/dt, and v = l * dtheta/dt, 
+#The rate of change of angular velocity is equal to d^2theta/dt^2
+#So we can define omega = dtheta/dt, and domega/dt 
 
 #need to pass in variables: g, l, curF, curTheta
 
@@ -35,14 +35,16 @@ def dfdt(curT, curF, g=9.81, l=2., useSmall=False):
     return [dthetadt, domegadt]
     
     
-time = linspace(0, 10, 100)   
+time = linspace(0, 10, 40)   
   
 #define the parameters
 g = 9.91
 l = 2.
   
 omega = 0.
-startingTheta = [0.01, 0.02, 0.05, 0.1]
+
+#for larger angles, the small angle approx. is less accurate
+startingTheta = [0.01, 0.02, 0.05, 0.1, 0.5]
 
 
 
@@ -54,7 +56,7 @@ for angle in startingTheta:
     
     
     plt.plot(time, result.y[0,:], label=r'$\theta(t)$ = ' + str(angle) + ' Full')
-    plt.plot(time, result.y[0,:], '--x', label='Small angle approx.')
+    plt.plot(time, resultSmall.y[0,:], '--x', label='Small angle approx.')
     
     
 plt.xlabel('Time'); plt.ylabel(r'$\theta(t)$')

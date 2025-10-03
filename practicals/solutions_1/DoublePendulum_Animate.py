@@ -39,17 +39,17 @@ def pendPos(theta,length,origin=[0,0]):
     return x,y
 
 #Function to draw the pendulum
-def drawPendulum(num,res,l1,l2,l3,l4,length=1,ntrail=1):
-    mn=max([0,num-ntrail])
-    x,y = pendPos(res[0,mn:num+1],-length)
-    l1.set_data([0,x[-1]],[0,y[-1]]) ; l2.set_data(x,y)
-    x2,y2 = pendPos(res[1,mn:num+1],-length,[x,y])
-    l3.set_data([x[-1],x2[-1]],[y[-1],y2[-1]]) ; l4.set_data(x2,y2)    
-    return l1,l2,l3,l4,
+# def drawPendulum(num,res,l1,l2,l3,l4,length=1,ntrail=1):
+#     mn=max([0,num-ntrail])
+#     x,y = pendPos(res[0,mn:num+1],-length)
+#     l1.set_data([0,x[-1]],[0,y[-1]]) ; l2.set_data(x,y)
+#     x2,y2 = pendPos(res[1,mn:num+1],-length,[x,y])
+#     l3.set_data([x[-1],x2[-1]],[y[-1],y2[-1]]) ; l4.set_data(x2,y2)    
+#     return l1,l2,l3,l4,
     
-#Make animation and then show it
-trailLen = 0# len(time) #Make this len(time) to keep all history
-line_ani = ani.FuncAnimation(fig1,drawPendulum,len(time),fargs=(result.y,line1[0],
-    line2[0],line3[0],line4[0],length,trailLen),interval=5,
-    blit=False, repeat=False)
+# #Make animation and then show it
+# trailLen = 0# len(time) #Make this len(time) to keep all history
+# line_ani = ani.FuncAnimation(fig1,drawPendulum,len(time),fargs=(result.y,line1[0],
+#     line2[0],line3[0],line4[0],length,trailLen),interval=5,
+#     blit=False, repeat=False)
 plt.show()

@@ -30,6 +30,7 @@ def dfdt(curT, curF, m, k):
     
     return [dxdt, dvdt]
 
+#defined values of m and k
 m=0.01; k=0.5
 
 time = linspace(0, 20, 400)

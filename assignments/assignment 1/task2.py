@@ -55,6 +55,7 @@ result = solve_ivp(dfdt, [xPos[0], xPos[-1]], f0, t_eval = xPos, args = (v_s_hat
 plt.plot(xPos, result.y[0,:], label = 'Electrostatic Potential Energy')
 plt.plot (xPos, result.y[1,:], label = 'Ion Energy')
 
+plt.title('Energy of plasma sheath against time')
 plt.xlabel('Position, x'); plt.ylabel('Energy')
 plt.legend(loc='best'); plt.show()
 

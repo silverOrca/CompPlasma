@@ -20,6 +20,7 @@ def solveEq(nx=10,aVal=0.0,dense=False,
             c2 = 0.5-(aVal-1)*exp(-1.0)
             c1 = ((aVal-1)*exp(-0.5))
             return c1*exp(xval)+c2+xval
+        
     length = 1.0
     xval=linspace(0.0,length,num=nx)-length*0.5 ; dx = length/(nx-1.0)
     #Create matrix operator

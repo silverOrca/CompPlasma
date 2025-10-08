@@ -63,7 +63,8 @@ for i in range(1, nx-1):
 dirichlet = False
 
 #analytic solution
-
+if dirichlet:
+    c2 = 
 
 
 

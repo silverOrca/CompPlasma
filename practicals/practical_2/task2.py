@@ -47,7 +47,7 @@ def anaSol(xVal, aVal, dirichlet=False):
 
 
 #numerical solution
-def numSol(dx, M, rho, dirichlet=False):
+def numSol(dx, M, rho, dirichlet=False, secondOrder=True):
     #Boundaries
     #Lower -- Dirichlet:0 (we always want to use zero-Dirichlet for the lower boundary)
     M[0, 0] = 1.0
@@ -61,8 +61,13 @@ def numSol(dx, M, rho, dirichlet=False):
         #Use Neumann boundary for lower, meaning a constant gradient (constant rho value)
         #Neumann upper boundary uses forward difference formula instead of backward difference.
         #This means signs are swapped
-        M[-1, -1] = 1./dx
-        M[-1, -2] = -1./dx
+        if secondOrder:
+            M[-1, -1] = 1.5/dx
+            M[-1, -2] = -2/dx
+            M[-1, -3] = 0.5/dx
+        else:
+            M[-1, -1] = 1./dx
+            M[-1, -2] = -1./dx
         
 
     #change the format of M from lil to CSR so spsolve can work
@@ -116,12 +121,13 @@ def solve(nx, aVal=0.05, dirichlet=False):
 
     #true for dirichlet, false for neumann (controlled by caller)
     dirichlet = False
+    secondOrder = True
     
     #upper boundary condition value is passed as aVal
     rho[-1] = aVal
 
     #Solve for numeric and analytic solutions
-    numeric = numSol(dx, M, rho, dirichlet)
+    numeric = numSol(dx, M, rho, dirichlet, secondOrder)
     analytic = anaSol(xVal, aVal, dirichlet)
     
     plt.plot(xVal, numeric, '-')

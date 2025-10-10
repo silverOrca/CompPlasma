@@ -4,6 +4,8 @@ from numpy import zeros,linspace,exp,polyfit,log,sqrt,mean,array
 import matplotlib.pyplot as plt
 from time import time
 #Main function for solving -d^2/dx^2 + d/dx = 1.0
+
+#aVal is the boundary condition
 def solveEq(nx=10,aVal=0.0,dense=False,
     secondOrder=False,dirichlet=False):
     """Solve Poisson"s equation on grid controlled by input.
@@ -31,6 +33,7 @@ def solveEq(nx=10,aVal=0.0,dense=False,
         M[i,i-1] = -1.0/dx**2 - 0.5/dx
         M[i,i]   =  2.0/dx**2 
         M[i,i+1] = -1.0/dx**2 + 0.5/dx
+        
     #Boundaries
     M[0,0] = 1.0 ; rho[0] = 0.0 #Always do Zero-dirichlet on left
     if dirichlet: #Dirichlet BC
@@ -47,6 +50,10 @@ def solveEq(nx=10,aVal=0.0,dense=False,
     M = M.tocsr()
     #Solve
     t1 = time() ; sol = solve(M,rho) ; t2 = time()
+    
+    plt.plot(xval, sol, '-')
+    plt.show()
+    
     #Calculate rms absolute error
     err=(sol-anSol(xval,aVal)); err=sqrt(mean(err*err))
     return xval,sol,err,t2-t1

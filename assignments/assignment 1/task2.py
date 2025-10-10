@@ -15,7 +15,7 @@ Plasma sheath code
 
 
 from scipy.integrate import solve_ivp
-from numpy import linspace, exp, sqrt
+from numpy import linspace, exp, sqrt, pi
 import matplotlib.pyplot as plt
 
 
@@ -30,8 +30,8 @@ def dfdt(curX, curF, v_s_hat = 1.):
     n_e = exp(phi_hat)
     dedt = n_i - n_e
     
-    
     dphidt = -energy_hat
+    
     
     return [dphidt, dedt]
 
@@ -52,12 +52,24 @@ f0 = [phi_hat, energy_hat]
 
 result = solve_ivp(dfdt, [xPos[0], xPos[-1]], f0, t_eval = xPos, args = (v_s_hat,))
 
-plt.plot(xPos, result.y[0,:], label = 'Electrostatic Potential Energy')
-plt.plot (xPos, result.y[1,:], label = 'Ion Energy')
+plt.plot(xPos, result.y[0,:], label = 'Normalised Electrostatic Potential Energy, '+r'$\hat{\phi}$')
+plt.plot (xPos, result.y[1,:], label = 'Normalised Ion Energy, ' + r'$\hat{E}$')
 
-plt.title('Energy of plasma sheath against time')
-plt.xlabel('Position, x'); plt.ylabel('Energy')
+plt.title('Normalised energy of plasma sheath against position')
+plt.xlabel('Distance into sheath, x'); plt.ylabel('Energy, ' + r'$\hat{\phi}$' + ' and ' + r'$\hat{E}$')
 plt.legend(loc='best'); plt.show()
+
+
+#Task 3
+#Plotting normalised current against time
+j = sqrt(1840/(2*pi)) * exp(result.y[0,:]) - 1
+
+plt.plot(xPos, j)
+plt.xlabel('Distance into sheath, x'); plt.ylabel('Current, ' + r'$\hat{j}$')
+plt.title('Normalised current against position')
+
+plt.show()
+
 
 
 

@@ -29,6 +29,7 @@ def fft_integrate(y, dx):
     k = 2.*pi*k / (n * dx)
     
     # Modify frequencies by dividing by ik
+    #1j means i in python
     f[1:] /= (1j * k[1:]) 
     f[0] = 0. # Set the arbitrary zero-frequency term to zero
     
@@ -60,3 +61,6 @@ if __name__ == "__main__":
     plt.title("Integration of periodic function using FFT")
     plt.legend()
     plt.show()
+
+
+#less points results in aliasing

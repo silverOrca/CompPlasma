@@ -48,8 +48,6 @@ def solve_current(result, v_s_hat):
     #Task 3
     #Plotting normalised current against time
     j = sqrt(1840/(2*pi)) * exp(result.y[0,:]) - 1
-
-    plt.plot(xPos, j, label=r'$\hat{v}_s = $'+str(v_s_hat))
     
     return j
     
@@ -73,13 +71,20 @@ f0 = [phi_hat, energy_hat]
 #array to store any number of results for energy to use in current solution function
 energy_result=[]
 
+
+
 #calls the energy solve function and shows graph
 for i in range(len(v_s_hat)):
     e_result = solve_energy(xPos, v_s_hat[i], phi_hat, energy_hat, f0)
-    energy_result.append(e_result)  
+    energy_result.append(e_result) 
+    
+#caption for energy plot
+energy_caption = 'Figure 1: Graph showing how the normalised electrostatic potential energy and normalised ion energy of an ion vary with distance into a plasma sheath, for varying ion velocities.' 
+    
 plt.title('Normalised energy of plasma sheath against position')
-plt.xlabel('Distance into sheath, x'); plt.ylabel('Energy, ' + r'$\hat{\phi}$' + ' and ' + r'$\hat{E}$')
+plt.xlabel('Distance into sheath, '+r'$\hat{x}$'); plt.ylabel('Energy, ' + r'$\hat{\phi}$' + ' and ' + r'$\hat{E}$')
 plt.legend(loc='best', prop={'size': 7})
+plt.figtext(0.5, -0.055, energy_caption, wrap=True, horizontalalignment='center', fontsize=8)
 plt.grid()
 plt.show()
 
@@ -99,15 +104,23 @@ for i in range(len(v_s_hat)):
     res = root_scalar(f, bracket=[0,40])
     wall = res.root
     
+    #putting roots and corresponding velocities into 2d roots list
     roots[i].append(wall)
     roots[i].append(v_s_hat[i])
+
+    #subtracts extra wall position from x value to line up all plots
+    plt.plot(xPos-roots[i][0], j_result, label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
     
     
 print(roots)
-    
-plt.xlabel('Distance into sheath, x'); plt.ylabel('Normalised current, ' + r'$\hat{j}$')
+  
+#caption for normalised current figure
+j_caption = 'Figure 2: Graph showing normalised current varying with distance into a plasma sheath, for varying ion velocities.'
+  
+plt.xlabel('Distance into sheath, ' r'$\hat{x}$'); plt.ylabel('Normalised current, ' + r'$\hat{j}$')
 plt.title('Normalised current against position')
 plt.legend(loc='best')
+plt.figtext(0.5, -0.055, j_caption, wrap=True, horizontalalignment='center', fontsize=8)
 plt.grid()
 plt.show()
 

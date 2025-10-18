@@ -110,7 +110,7 @@ def solve(nx, aVal=0.05, dirichlet=False):
     rho = zeros(nx) + 1.0
 
     #Set the elements in the matrix but skip boundary conditions
-    #Elements are determined by the second order difference formula
+    #Elements are determined by the second order central difference formula
     for i in range(1, nx-1):
         # sets previous value (A)
         M[i, i-1] = -1.0/dx**2 - 0.5/dx

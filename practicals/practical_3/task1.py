@@ -114,10 +114,12 @@ fourierspace = fft(f)
 #do fftfreq to get frequencies for plotting fourier transform (x-axis)
 space = fftfreq(nx, dx)
 
-
+#call function to get fourier transform with negative frequencies and in
+#correct order
 neg = neg_plot(fourierspace, space, False)
 
 #compare = inverse_plot(fourierspace, space, f, False)
 
+#call function to filter the fourier transform and then plot as regular function
 filtered = filtered_plot(fourierspace, space, False)
 

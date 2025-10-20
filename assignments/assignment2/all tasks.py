@@ -21,8 +21,8 @@ def dfdt(curX, curF, v_s_hat = 1.):
     phi_hat = curF[0]
     energy_hat = curF[1]
     
-    denom = v_s_hat**2 - 2 * phi_hat
-    n_i = v_s_hat / sqrt(denom)
+    vi_squared = v_s_hat**2 - 2 * phi_hat
+    n_i = v_s_hat / sqrt(vi_squared)
     
     n_e = exp(phi_hat)
     dedt = n_i - n_e
@@ -43,11 +43,11 @@ def solve_energy(xPos, v_s_hat, phi_hat, energy_hat, f0):
     return result
  
 
-#solves for the current and plots 
-def solve_current(result, v_s_hat):
+#solves for the current
+def solve_current(result, v_s_hat, mass_ratio):
     #Task 3
     #Plotting normalised current against time
-    j = sqrt(1840/(2*pi)) * exp(result.y[0,:]) - 1
+    j = sqrt(mass_ratio/(2*pi)) * exp(result.y[0,:]) - 1
     
     return j
     
@@ -82,7 +82,8 @@ for i in range(len(v_s_hat)):
 energy_caption = 'Figure 1: Graph showing how the normalised electrostatic potential energy and normalised ion energy of an ion vary with distance into a plasma sheath, for varying ion velocities.' 
     
 plt.title('Normalised energy of plasma sheath against position')
-plt.xlabel('Distance into sheath, '+r'$\hat{x}$'); plt.ylabel('Energy, ' + r'$\hat{\phi}$' + ' and ' + r'$\hat{E}$')
+plt.xlabel('Distance from bulk plasma into sheath, '+r'$\hat{x}$')
+plt.ylabel('Energy, ' + r'$\hat{\phi}$' + ' and ' + r'$\hat{E}$')
 plt.legend(loc='best', prop={'size': 7})
 plt.figtext(0.5, -0.055, energy_caption, wrap=True, horizontalalignment='center', fontsize=8)
 plt.grid()
@@ -93,7 +94,7 @@ roots = [[] for i in range(len(v_s_hat))]
 
 #calls the current solve function and shows graph
 for i in range(len(v_s_hat)):
-    j_result = solve_current(energy_result[i], v_s_hat[i])
+    j_result = solve_current(energy_result[i], v_s_hat[i], 1840)
     
     #create interpolated function of x and j values
     interpolated = interp1d(xPos, j_result)
@@ -109,7 +110,7 @@ for i in range(len(v_s_hat)):
     roots[i].append(v_s_hat[i])
 
     #subtracts extra wall position from x value to line up all plots
-    plt.plot(xPos-roots[i][0], j_result, 'o', label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
+    plt.plot(xPos-roots[i][0], j_result, label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
     
     
 print(roots)
@@ -119,9 +120,10 @@ j_caption = 'Figure 2: Graph showing normalised current varying with distance in
 
 #to show visually where plasma and sheath wall are
 plt.axvspan(-40, 0, facecolor='red', alpha=0.1, label='Plasma')
-plt.axvspan(0, 40, facecolor='blue', alpha=0.1, label='Sheath wall')
+plt.axvspan(0, 40, facecolor='blue', alpha=0.1, label='Wall')
 
-plt.xlabel('Distance into sheath, ' r'$\hat{x}$'); plt.ylabel('Normalised current, ' + r'$\hat{j}$')
+plt.xlabel('Distance (from bulk plasma into wall), ' r'$\hat{x}$')
+plt.ylabel('Current, ' + r'$\hat{j}$'+', normalised to '+r'$e n_s c_s$')
 plt.title('Normalised current against position')
 plt.legend(loc='best')
 plt.figtext(0.5, -0.055, j_caption, wrap=True, horizontalalignment='center', fontsize=8)

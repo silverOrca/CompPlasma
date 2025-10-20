@@ -90,10 +90,13 @@ plt.show()
 
 #store wall placements with corresponding velocities
 roots = [[] for i in range(len(v_s_hat))]
+#store solutions to use for colouring plot
+solves = [[] for i in range(len(v_s_hat))]
 
 #calls the current solve function and shows graph
 for i in range(len(v_s_hat)):
     j_result = solve_current(energy_result[i], v_s_hat[i])
+    solves.append(j_result)
     
     #create interpolated function of x and j values
     interpolated = interp1d(xPos, j_result)
@@ -116,7 +119,11 @@ print(roots)
   
 #caption for normalised current figure
 j_caption = 'Figure 2: Graph showing normalised current varying with distance into a plasma sheath, for varying ion velocities.'
-  
+
+#to show visually where plasma and sheath wall are
+plt.axvspan(-40, 0, facecolor='red', alpha=0.1, label='Plasma')
+plt.axvspan(0, 40, facecolor='blue', alpha=0.1, label='Sheath wall')
+
 plt.xlabel('Distance into sheath, ' r'$\hat{x}$'); plt.ylabel('Normalised current, ' + r'$\hat{j}$')
 plt.title('Normalised current against position')
 plt.legend(loc='best')

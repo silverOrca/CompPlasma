@@ -90,13 +90,10 @@ plt.show()
 
 #store wall placements with corresponding velocities
 roots = [[] for i in range(len(v_s_hat))]
-#store solutions to use for colouring plot
-solves = [[] for i in range(len(v_s_hat))]
 
 #calls the current solve function and shows graph
 for i in range(len(v_s_hat)):
     j_result = solve_current(energy_result[i], v_s_hat[i])
-    solves.append(j_result)
     
     #create interpolated function of x and j values
     interpolated = interp1d(xPos, j_result)
@@ -112,7 +109,7 @@ for i in range(len(v_s_hat)):
     roots[i].append(v_s_hat[i])
 
     #subtracts extra wall position from x value to line up all plots
-    plt.plot(xPos-roots[i][0], j_result, label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
+    plt.plot(xPos-roots[i][0], j_result, 'o', label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
     
     
 print(roots)

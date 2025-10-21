@@ -10,7 +10,7 @@ from scipy.integrate import solve_ivp
 #this is the interpolation module
 from scipy.interpolate import interp1d
 #to find x at a root (y=0)
-from scipy.optimize import root_scalar
+from scipy.optimize import fsolve
 from numpy import linspace, exp, sqrt, pi
 import matplotlib.pyplot as plt
 
@@ -90,37 +90,47 @@ plt.grid()
 plt.show()
 
 #store wall placements with corresponding velocities
-roots = [[] for i in range(len(v_s_hat))]
+xRoots = [[] for i in range(len(v_s_hat))]
+yRoots = [[] for i in range(len(v_s_hat))]
 
 #calls the current solve function and shows graph
 for i in range(len(v_s_hat)):
     j_result = solve_current(energy_result[i], v_s_hat[i], 1840)
     
+    #Find x and y roots using fsolve
     #create interpolated function of x and j values
     interpolated = interp1d(xPos, j_result)
-    #function to return value for use of root finder
-    def f(x_val):
-        return interpolated(x_val)
-    #find which x value corresponds to the first j=0. Used bracket length of full thing
-    res = root_scalar(f, bracket=[0,40])
-    wall = res.root
+    
+    #need inital guess for fsolve - roughly where j=0 (at wall)
+    #at wall j_hat goes from positive to negative (passes through 0)
+    #as j_hat is given in part by exp(phi_hat)
+    #so will have point where velocity=0 as it changes
+    for i in range(len(interpolated)):
+        if 
+    
+    origins = fsolve(interpolated, guess)
     
     #putting roots and corresponding velocities into 2d roots list
-    roots[i].append(wall)
-    roots[i].append(v_s_hat[i])
+    xRoots[i].append(origins[0])
+    xRoots[i].append(v_s_hat[i])
 
     #subtracts extra wall position from x value to line up all plots
-    plt.plot(xPos-roots[i][0], j_result, label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
+    plt.plot(xPos-xRoots[i][0], j_result, label=r'$\hat{v}_s = $'+str(v_s_hat[i]))
     
+    #plots the position of the wall
+    #plt.plot()
     
-print(roots)
+    print(origins)
+    
+print(xRoots)
   
 #caption for normalised current figure
 j_caption = 'Figure 2: Graph showing normalised current varying with distance into a plasma sheath, for varying ion velocities.'
 
-#to show visually where plasma and sheath wall are
+#to show visually where plasma, sheath, and wall are
 plt.axvspan(-40, 0, facecolor='red', alpha=0.1, label='Plasma')
-plt.axvspan(0, 40, facecolor='blue', alpha=0.1, label='Wall')
+#plt.axvspan(0, wall, facecolor='yellow', alpha=0.1, label='Plamsa Sheath')
+#plt.axvspan(wall, 40, facecolor='blue', alpha=0.1, label='Wall')
 
 plt.xlabel('Distance (from bulk plasma into wall), ' r'$\hat{x}$')
 plt.ylabel('Current, ' + r'$\hat{j}$'+', normalised to '+r'$e n_s c_s$')

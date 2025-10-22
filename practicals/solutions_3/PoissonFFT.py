@@ -28,6 +28,7 @@ phiHat[1:] = rhoHat[1:] / kx[1:]**2
 #Now we can find phi
 phi = ifft(phiHat)
 
+
 #Analytic solution
 phiAn = sin(2*pi*x)/(2*pi)**2
 err = phiAn-phi

@@ -18,35 +18,15 @@ To do:
 
 import matplotlib.pyplot as plt 
 from scipy.fft import fft, fftfreq, ifft
-from numpy import linspace, sin, pi, zeros, sqrt, mean, zeros_like
+from numpy import linspace, sin, pi, zeros, sqrt, mean, zeros_like, concatenate
 from scipy.integrate import solve_ivp
-
-#equation for use of solve_ivp to evolve rho in time
-#defines the time evolution of rho
-#include boundary conditions here too
-def dfdt(curT, curF):
-    #already passed in initial condition rho(x,0) into solve_ivp
-    #initial condtion for d rho / dt = 0 = v
-    rho = curF[:nx]
-    v = curF[nx:]
-
-    drho_dt = v
-
-    phi = compSolve(x, rho, curF)
-
-    dv_dt = - phi  #need to get phi from current rho
-
-
-    return [drho_dt, dv_dt]
-
-
-
 
 
 
 #computationally solve for phi doing fourier
-def compSolve(x, rho, f0):
+def compSolve(x, rho):
     dx = x[1]-x[0]
+    nx = len(x)
 
     #1/lambda
     lamb = fftfreq(nx, dx)
@@ -54,9 +34,6 @@ def compSolve(x, rho, f0):
     #now can calculate k
     k = 2 * pi * lamb
 
-    #with initial condition rho = rho(x,0)
-    
-    
     #fourier transform to get rho_hat
     rho_hat = fft(rho)
 
@@ -76,6 +53,30 @@ def compSolve(x, rho, f0):
     
     return phi
 
+
+
+#equation for use of solve_ivp to evolve rho in time
+#defines the time evolution of rho
+#include boundary conditions here too
+def dfdt(curT, curF, x):
+    nx = len(x)
+
+    #set out variables from flattened initial state function f0
+    rho = curF[:nx]
+    v = curF[nx:]
+
+    drho_dt = v
+
+    phi = compSolve(x, rho)
+
+    dv_dt = - phi  #need to get phi from current rho
+
+    return concatenate([drho_dt, dv_dt])
+
+
+
+
+
 #analytically solve for phi - this is just the first term in fourier eqn
 def anaSolve(x):
     phiAn = sin(2*pi*x)/(2*pi)**2
@@ -84,27 +85,25 @@ def anaSolve(x):
 
 #define parameters
 length = 1.0
-nx = 100
-
-time = linspace(0.0, 200.0, nx)
+nx=100
+nt = 100
+time = linspace(0.0, 200.0, nt)
 
 #spatial grid to pass in
 x = linspace(0, length, nx, endpoint=False)
 
 #define rho (rhs vector/function)
-rho = sin(2 * pi * x / length)
-drho_dt = zeros_like(rho)
+rho0 = sin(2 * pi * x / length)
+drho_dt0 = zeros_like(rho0)
 
 #initial conditions
-#
-f0 = [rho, drho_dt]
+#needs to be 1d
+f0 = concatenate([rho0, drho_dt0])
 
-solution = solve_ivp(dfdt, [0, time[-1]], f0, t_eval=time)#.y[:,0]
+solution = solve_ivp(dfdt, [0, time[-1]], f0, t_eval=time, args=(x,))#.y[:,0]
 print(solution)
 
-#do the computational solution and plot
-#compSol = compSolve(x, rho, f0)
-#plt.plot(x, compSol)
+
 
 #get the analytical solution and plot
 #anaSol = anaSolve(x)

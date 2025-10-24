@@ -17,7 +17,7 @@ To do:
 
 
 import matplotlib.pyplot as plt 
-from scipy.fft import fft, fftfreq, ifft
+from scipy.fft import fft, fftfreq, ifft, fftshift
 from numpy import linspace, sin, pi, zeros, sqrt, mean, zeros_like, concatenate
 from scipy.integrate import solve_ivp
 
@@ -51,7 +51,7 @@ def compSolve(x, rho):
     #now inverse fourier transform to get phi from phi_hat
     phi = ifft(phi_hat)
     
-    return phi
+    return phi.real
 
 
 
@@ -65,15 +65,15 @@ def dfdt(curT, curF, x):
     rho = curF[:nx]
     v = curF[nx:]
 
-    drho_dt = v
-
     phi = compSolve(x, rho)
 
+    drho_dt = v
+    #dv_dt = - phi = d^2 rho / dt^2
+    
     dv_dt = - phi  #need to get phi from current rho
 
+    #returns drho/dt and -phi = d^2 rho / dt^2
     return concatenate([drho_dt, dv_dt])
-
-
 
 
 
@@ -83,9 +83,14 @@ def anaSolve(x):
 
     return phiAn
 
+
 #define parameters
 length = 1.0
 nx=100
+
+x = linspace(0.0,length,nx,endpoint=False)
+dx = x[1]-x[0]
+
 nt = 100
 time = linspace(0.0, 200.0, nt)
 
@@ -101,9 +106,28 @@ drho_dt0 = zeros_like(rho0)
 f0 = concatenate([rho0, drho_dt0])
 
 solution = solve_ivp(dfdt, [0, time[-1]], f0, t_eval=time, args=(x,))#.y[:,0]
-print(solution)
+#print(solution)
 
 
+#extract final values from solution - all times and first nx points
+drho_dt_final = solution.y[:nx, :].T
+#this is the -phi = d^2 rho / dt^2
+dv_dt_final = solution.y[:,nx:]
+
+plt.contourf(x,time,drho_dt_final,64)
+plt.xlabel(r'$x$') ; plt.ylabel(r'$t$')
+plt.colorbar(label=r'$\rho$')
+plt.show()
+
+
+#Look at FFT coefficients
+rhoHat = (1.0/nx)*(fft(drho_dt_final,axis=1).imag)
+invLamb = fftfreq(nx,dx)
+plt.figure(2)
+plt.contourf(fftshift(invLamb),time,fftshift(rhoHat,axes=1),64)
+plt.xlabel(r'$1/\lambda$') ; plt.ylabel(r'$t$')
+plt.colorbar(label=r'$\hat{\rho}$')
+plt.show()
 
 #get the analytical solution and plot
 #anaSol = anaSolve(x)

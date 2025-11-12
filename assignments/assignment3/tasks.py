@@ -15,15 +15,15 @@ xPos = linspace(0, 60, 100)
 
 #normalised ion velocity at start of sheath
 #using multiple values to compare
-v_s_hat = [1.]
+v_s_hat = 1.
 
 #initial conditions
 phi_hat = 0.
 electric_field_hat = 0.001
-v_i_hat = 1.
+v_i_hat = v_s_hat
 
 #define function of values with initial values
-f0 = [phi_hat, electric_field_hat]
+f0 = [phi_hat, electric_field_hat, v_i_hat]
 
 g0 = [v_i_hat]
 
@@ -32,39 +32,48 @@ g0 = [v_i_hat]
 lengths = [0.1, 1., 10., 100., 1000., 10000.]
 
 #function of poisson equation
-def dfdt(curX, curF, v_s_hat = 1.):
+def dfdt(curX, curF, length, v_s_hat = 1.):
     #set out the variables
     phi_hat = curF[0]
     electric_field_hat = curF[1]
+    v_i_hat = curF[2]
     
-    vi_squared = v_s_hat**2 - 2 * phi_hat
-    n_i = v_s_hat / sqrt(vi_squared)
+    #vi_squared = v_s_hat**2 - 2 * phi_hat
+    #n_i = v_s_hat / sqrt(vi_squared)
+    
+    #new equation for n_i that doesn't use conservation of energy
+    n_i = v_s_hat / v_i_hat
     
     n_e = exp(phi_hat)
     dedt = n_i - n_e
     
     dphidt = -electric_field_hat
+    
+    
+    e_field = electric_field_hat
+    
+    
+    dvi_dt = (e_field / v_i_hat) - (1/length) * v_i_hat
+
 
     
-    
-    
-    return [dphidt, dedt]
+
+    return [dphidt, dedt, dvi_dt]
 
 
 #solves for how the ion velocity changes w.r.t. position to wall
-def dgdt(curX, curF, electric_field_hat, length):
+#def dgdt(curX, curF, electric_field_hat, length):
     #unpack values
-    v_i_hat = curF[0]
-    e_field = electric_field_hat(curX)
     
-    dvi_dt = (e_field / v_i_hat) - (1/length) * v_i_hat
     
-    return dvi_dt
+    
+    
+   # return dvi_dt
 
 
 #solves for the electrostatic potential energy and electric field, returns result only
-def solve_field(xPos, v_s_hat, phi_hat, electric_field_hat, f0):
-    result = solve_ivp(dfdt, [xPos[0], xPos[-1]], f0, t_eval = xPos, args = (v_s_hat,))
+def solve_field(xPos, length, v_s_hat, phi_hat, electric_field_hat, f0):
+    result = solve_ivp(dfdt, [xPos[0], xPos[-1]], f0, t_eval = xPos, args = (length, v_s_hat))
     return result
  
 
@@ -77,10 +86,10 @@ def solve_current(potentials, v_s_hat, mass_ratio):
   
     
 #solves for the ion velocity 
-def solve_ion_velocity(xPos, electric_field_hat, length, v_s_hat):
+#def solve_ion_velocity(xPos, electric_field_hat, length, v_s_hat):
     
-    ion_velocities = solve_ivp(dgdt, [xPos[0], xPos[-1]], g0, t_eval = xPos, args = (electric_field_hat, length))
-    return ion_velocities
+    #ion_velocities = solve_ivp(dgdt, [xPos[0], xPos[-1]], g0, t_eval = xPos, args = (electric_field_hat, length))
+    #eturn ion_velocities
     
 
 #finds the wall positions and returns them
@@ -93,6 +102,7 @@ def find_wall(xPos, j_result):
     
     return wall
 
+#used in 
 def velocities_at_wall(xPos, velocities, wall_position):
     #get corresponding values for velocity against position
     vel_interp = interp1d(xPos, velocities)
@@ -106,9 +116,9 @@ def velocities_at_wall(xPos, velocities, wall_position):
   
 def plot_field_results(xPos, potentials, electric_fields, v_s_hat):
     # Plot the electric field data
-    for i, (potential, field, v_s) in enumerate(zip(potentials, electric_fields, v_s_hat)):
-        plt.plot(xPos, potential, label = 'Normalised Electrostatic Potential Energy, '+r'$\hat{\phi}$'+', for '+r'$\hat{v}_s = $'+str(v_s))
-        plt.plot(xPos, field, label = 'Normalised Electric Field, ' + r'$\hat{E}$'+', for '+r'$\hat{v}_s = $'+str(v_s), linestyle='dashed')
+    for i, (potential, field) in enumerate(zip(potentials, electric_fields)):
+        plt.plot(xPos, potential, label = 'Normalised Electrostatic Potential Energy, '+r'$\hat{\phi}$'+', for '+r'$\hat{v}_s = $'+str(v_s_hat))
+        plt.plot(xPos, field, label = 'Normalised Electric Field, ' + r'$\hat{E}$'+', for '+r'$\hat{v}_s = $'+str(v_s_hat), linestyle='dashed')
     
     #caption for electric field plot
     field_caption = 'Figure 1: Graph showing how the normalised electrostatic potential energy and normalised electric field vary with distance through a plasma sheath into a wall, for varying initial ion velocities.' 
@@ -126,9 +136,9 @@ def plot_field_results(xPos, potentials, electric_fields, v_s_hat):
 def plot_current_results(xPos, wall_pos, current_result, v_s_hat):
     
     #loops over number of indexes within 2d array of results
-    for i, (j_result, wall_position, v_s) in enumerate(zip(current_result, wall_pos, v_s_hat)):
+    for i, (j_result, wall_position) in enumerate(zip(current_result, wall_pos)):
         #subtracts extra wall position from x value to line up all plots
-        plt.plot(xPos-wall_position, j_result, label=r'$\hat{v}_s = $'+str(v_s))
+        plt.plot(xPos-wall_position, j_result, label=r'$\hat{v}_s = $'+str(v_s_hat))
     
     #caption for normalised current figure
     j_caption = 'Figure 2: Graph showing normalised current varying with distance into a plasma sheath, for varying ion velocities.'
@@ -149,9 +159,13 @@ def plot_current_results(xPos, wall_pos, current_result, v_s_hat):
 def plot_velocity_results(xPos, wall_pos, velocity_result, lengths, v_s_hat):
     
     fig, ax = plt.subplots()
+
+    #add limits to the x and y values plotted
+    ax.set_xlim([0, 20])
+    ax.set_ylim([-0.5, 10])
     
     for i, (v, length) in enumerate(zip(velocity_result, lengths)):
-        ax.plot(xPos-wall_pos, v, label = 'L = '+str(length))
+        ax.plot(xPos-wall_pos[i], v, label = 'L = '+str(length))
         
         
     ax.set_xlabel('Distance (from bulk plasma into wall), ' +r'$\hat{x} - x_w$'+', normalised to '+r'$\lambda_D$')
@@ -164,13 +178,13 @@ def plot_velocity_results(xPos, wall_pos, velocity_result, lengths, v_s_hat):
     wall_velocities = []
     
     #iterates over results to find velocity at wall for each
-    for v in velocity_result:
-        v_wall = velocities_at_wall(xPos, v, wall_pos)
+    for v in range(len(velocity_result)):
+        v_wall = velocities_at_wall(xPos, velocity_result[v], wall_pos[v])
         wall_velocities.append(v_wall)
     
     
     #inset plot of velocities at wall
-    axins = inset_axes(ax, width="30%", height="30%", loc='upper left', borderpad=3)
+    axins = inset_axes(ax, width="15%", height="30%", loc='upper left', borderpad=3)
     
     #set log scale
     axins.semilogx(lengths, wall_velocities, '-o', markersize=3)
@@ -205,35 +219,48 @@ def main():
     #arrays to store results of potential and field
     potentials = []
     electric_fields = []
-
-    #calls the electric field solve function and shows graph
-    for i in range(len(v_s_hat)):
-        e_result = solve_field(xPos, v_s_hat[i], phi_hat, electric_field_hat, f0)
-        
-        #unpack the results
-        potentials.append(e_result.y[0,:])
-
-        electric_fields.append(e_result.y[1,:])
-        
-        
-    plot_field_results(xPos, potentials, electric_fields, v_s_hat)
+    velocity_result = []
     
-
     #store current results
     current_result = []
     #store wall placements with corresponding velocities
     wall_pos = []
 
-    #calls the current solve function and shows graph
-    for i in range(len(v_s_hat)):
-        j_result = solve_current(potentials[i], v_s_hat[i], 1840)
-        current_result.append(j_result)
+    #calls the electric field solve function and shows graph
+    
         
+    for length in lengths:
+        #solve for the energy and ion velocity
+        result = solve_field(xPos, length, v_s_hat, phi_hat, electric_field_hat, f0)
+            
+        #unpack the results
+        potentials.append(result.y[0,:])
+        electric_fields.append(result.y[1,:])
+        velocity_result.append(result.y[2,:])
+            
+            
+        j_result = solve_current(potentials[-1], v_s_hat, 1840)
+        current_result.append(j_result)
+            
+
         #find the current wall positions
         cur_wall = find_wall(xPos, j_result)
-        
+                
         #putting roots into list of wall locs for each velocity
         wall_pos.append(cur_wall)
+        
+            
+    print(wall_pos)
+        
+        
+    plot_field_results(xPos, potentials, electric_fields, v_s_hat)
+    
+
+    
+
+    #calls the current solve function and shows graph
+    #for i in range(len(v_s_hat)):
+        
         
     plot_current_results(xPos, wall_pos, current_result, v_s_hat)
 
@@ -243,18 +270,18 @@ def main():
     
     
     
-    velocity_result = []
-    #interpolate electric field to enable plotting
-    e_interp = interp1d(xPos, electric_fields)
     
-    for i in range(len(v_s_hat)):
-        for length in lengths:
+    #interpolate electric field to enable plotting
+    #e_interp = interp1d(xPos, electric_fields)
+    
+    #for i in range(len(v_s_hat)):
+        #for length in lengths:
             
-            ion_velocity = solve_ion_velocity(xPos, e_interp, length, v_s_hat[i])
+            #ion_velocity = solve_ion_velocity(xPos, e_interp, length, v_s_hat[i])
             
             #unpack and store results
-            velocity_result.append(ion_velocity.y[0,:])
-    print(velocity_result) 
+            #velocity_result.append(ion_velocity.y[0,:])
+    #print(velocity_result) 
     plot_velocity_results(xPos, wall_pos, velocity_result, lengths, v_s_hat)
 
 

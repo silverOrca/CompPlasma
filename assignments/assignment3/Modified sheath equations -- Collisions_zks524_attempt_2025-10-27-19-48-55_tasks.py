@@ -20,6 +20,10 @@ v_s_hat = [1.]
 #initial conditions
 phi_hat = 0.
 electric_field_hat = 0.001
+#DD: You use vi0==1 here, strictly vs==vi0 so it is safer to pass vs
+#for vi0 (i.e. vi0 = vs) so that if you wanted to explore
+#different vs values you don't have to remember to change the value
+#used here as well.
 v_i_hat = 1.
 
 #define function of values with initial values
@@ -29,6 +33,7 @@ g0 = [v_i_hat]
 
 
 #different lengths before sheath (debye lengths)
+#DD: This is fine but note that numpy.logscale might help here
 lengths = [0.1, 1., 10., 100., 1000., 10000.]
 
 #function of poisson equation
@@ -36,7 +41,11 @@ def dfdt(curX, curF, v_s_hat = 1.):
     #set out the variables
     phi_hat = curF[0]
     electric_field_hat = curF[1]
-    
+
+#DD: This is no longer correct! We have replaced the conservation of energy
+#with the equation for dvi/dx -- you have to include that equation directly here.
+#In other words rather than integrating just phi(x) and E(x), you have to integrate
+#for phi(x), E(x) and vi(x) together as the equation for E depends directly on vi
     vi_squared = v_s_hat**2 - 2 * phi_hat
     n_i = v_s_hat / sqrt(vi_squared)
     
@@ -44,8 +53,6 @@ def dfdt(curX, curF, v_s_hat = 1.):
     dedt = n_i - n_e
     
     dphidt = -electric_field_hat
-
-    
     
     
     return [dphidt, dedt]
@@ -53,10 +60,12 @@ def dfdt(curX, curF, v_s_hat = 1.):
 
 #solves for how the ion velocity changes w.r.t. position to wall
 def dgdt(curX, curF, electric_field_hat, length):
+#DD: Good that you pass in length here
     #unpack values
     v_i_hat = curF[0]
+#DD: I think electric_field_hat is a scalar (i.e. a single number) so I'd expect this to fail
     e_field = electric_field_hat(curX)
-    
+#DD: This is the correct equation    
     dvi_dt = (e_field / v_i_hat) - (1/length) * v_i_hat
     
     return dvi_dt
@@ -64,6 +73,7 @@ def dgdt(curX, curF, electric_field_hat, length):
 
 #solves for the electrostatic potential energy and electric field, returns result only
 def solve_field(xPos, v_s_hat, phi_hat, electric_field_hat, f0):
+#DD: Note you don't use the phi_hat and electric_field_hat that you pass here    
     result = solve_ivp(dfdt, [xPos[0], xPos[-1]], f0, t_eval = xPos, args = (v_s_hat,))
     return result
  
@@ -176,6 +186,8 @@ def plot_velocity_results(xPos, wall_pos, velocity_result, lengths, v_s_hat):
     axins.semilogx(lengths, wall_velocities, '-o', markersize=3)
     
     axins.set_xlabel('Collision Length, L, normalised to '+r'$\lambda_D$', fontsize=7)
+#DD: Normalisations for v_i here? Probably OK as this is an inset and you do give
+#the normalisation elsewhere on the figure.
     axins.set_ylabel(r'$\hat{v}_i$ at wall', fontsize=7)
     axins.grid(True, alpha=0.4)
     axins.set_title('Velocity at Wall vs L', fontsize=8)
@@ -262,3 +274,6 @@ def main():
 if __name__ == "__main__":
     main()
 
+
+#DD: Despite not quite adding the extra equation correctly the rest of your code does
+#the right thing so I've been able to carry the error forwards.

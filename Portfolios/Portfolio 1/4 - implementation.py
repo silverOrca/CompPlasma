@@ -68,9 +68,6 @@ def dvdt(curT, curF, q, m, E_x=0, E_y=0):
     
     
     
-    
-
-
 
 #example of a magnetic field varying with position
 def B_func(x, y, x_0, x_c, B_0):
@@ -78,7 +75,6 @@ def B_func(x, y, x_0, x_c, B_0):
     #doesn't use y position in equation
     B_z = (B_0 * x_0) / (x - x_c)
     
-    Bmag[x, y] = B_z
     
     return B_z
 
@@ -95,40 +91,74 @@ def plotting():
     plt.colorbar()
 
 
-
-#runs the code to output the B_func plot
+# #runs the code to output the B_func plot
 def run_B_plot(x, y):
     
     #fill the empty array with spatially varying B calculated from B_func
     for ix, x in enumerate(xx):
         for iy, y in enumerate(yy):
-            Bmag[ix, iy] = B_func(x, y, x_0, x_c, B_0)
-            
+            B_z = (B_0 * x_0) / (x - x_c)  # Calculate B_z directly here
+            Bmag[ix, iy] = B_z
+    print(Bmag.shape)
     return Bmag
-    #plotting()
+    plotting()
+
+
+#kinetic energy equation, normalised
+def kinetic_energy(m, v_x, v_y):
+    e_k = m * (v_x**2 + v_y**2)
+    
+    return e_k
 
 
     
 def main():
     E_x = 0.0 
-    E_y = 0.0
+    E_y = 0.01
+        
+    figure1 = plt.figure()
+    figure2 = plt.figure()
+    
+    ax1 = figure1.add_subplot(1,1,1)
+    ax2 = figure2.add_subplot(1,1,1)
+    
     for i in range(len(initial_x)):
         f0 = [initial_x[i], initial_y[i], initial_vx[i], initial_vy[i]]
         solution = solve_ivp(dvdt, [time[0], time[-1]], f0, t_eval=time, args=(q[i], m[i], E_x, E_y))
         
+        #set out solutions
         dvx_dt = solution.y[0,:]
         dvy_dt = solution.y[1,:]
+        dx_dt = solution.y[2,:]
+        dy_dt = solution.y[3,:]
         
-        plt.plot(time, dvx_dt, label='dvx_dt '+str(i))
-        plt.plot(time, dvy_dt, label='dvy_dt '+str(i))
+        
+        ax1.plot(time, dvx_dt, label='dvx_dt '+str(i))
+        ax1.plot(time, dvy_dt, label='dvy_dt '+str(i))
+        
+        
+        e_k = kinetic_energy(m[i], dx_dt, dy_dt)
+        
+        ax2.plot(time, e_k, label =r'$E_k$ '+str(i))
+        
+        
+        
 
-    plotting()    
+    #plotting()    
     
-    plt.xlabel('Time')
-    plt.ylabel('Velocity components')
-    plt.title('Velocity components of charged particle over time in varying B field')
-    plt.legend(loc='best')
+    ax1.set_xlabel('Time')
+    ax1.set_ylabel('Velocity components')
+    ax1.set_title('Velocity components of charged particle over time in varying B field')
+    ax1.legend(loc='best')
+    
+    
+    ax2.set_xlabel('Time')
+    ax2.set_ylabel('Kinetic energy')
+    ax1.set_title('Kinetic energy of particle varying with time')
+   
+    
     plt.show()
+    
     
     
 if __name__ == "__main__":

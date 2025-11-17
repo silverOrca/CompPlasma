@@ -33,9 +33,9 @@ B_0 = 1.0
 time = linspace(0, 500, 1000)
 
 #values for each parameter to iterate over
-initial_x = [3*L_x/4, L_x/2, L_x/4, L_x/2]
+initial_x = [(3*L_x)/4, L_x/2, L_x/4, L_x/2]
 initial_y = [L_y/2, L_y/2, L_y/2, L_y/2]
-initial_vx = [1.0, 1.0, 1.0, 1.0]
+initial_vx = [1.0, 1.0, 1.0, -1.0]
 initial_vy = [0.0, 0.0, 0.0, 0.0]
 q = [1.0, -1.0, 1.0, 1.0]
 m = [1.0, 1.0, 0.1, 0.1]
@@ -116,7 +116,7 @@ def kinetic_energy(m, v_x, v_y):
     
 def main():
     E_x = 0.0 
-    E_y = 0.0
+    E_y = 0.01
         
     #velocity
     figure1 = plt.figure()
@@ -157,12 +157,16 @@ def main():
                 
         #solve kinetic energy and plot
         e_k = kinetic_energy(m[i], dx_dt, dy_dt)
+        
+        #do final e_k / initial e_k for each particle
+        print(e_k[-1]/e_k[0])
+        
+        
         ax2.plot(time, e_k, label =r'$E_k$ '+str(i))
         
-        #plot the trajectory in x
+        #plot the trajectory - y against x
         ax4.plot(dx_dt, dy_dt, zorder=10)
-        #plot the trajectory in y
-        #ax5.plot(time, dy_dt)
+
         
          
     

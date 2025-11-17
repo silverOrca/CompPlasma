@@ -122,10 +122,8 @@ def main():
     figure1 = plt.figure()
     #kinetic energy
     figure2 = plt.figure()
-    #trajectory in x
+    #trajectory in x and y
     figure3 = plt.figure()
-    #trajectory in y
-    figure4 = plt.figure()
     
     ax1 = figure1.add_subplot(1,1,1)
     ax2 = figure2.add_subplot(1,1,1)
@@ -137,7 +135,7 @@ def main():
     #ax5=ax5.twinx()
     
     B_mag= run_B_plot()
-    ax3.pcolormesh(xx, yy, B_mag.T, shading = 'auto', zorder=0)
+    im = ax3.pcolormesh(xx, yy, B_mag.T, shading = 'auto', zorder=0)
     ax3.set_xlabel('x hat')
     ax3.set_ylabel('y hat')
     
@@ -185,8 +183,7 @@ def main():
     ax4.set_xlabel('x')
     ax4.set_ylabel('y')
    
-    
-    #figure3.colorbar(, cax=ax4)
+    figure3.colorbar(im, ax=ax4, label='Magnetic field')
     plt.show()
     
     

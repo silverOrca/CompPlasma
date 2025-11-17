@@ -80,8 +80,8 @@ def B_func(x, y, x_0, x_c, B_0):
 
 
 #to plot anything needed
-def plotting():
-    
+def plotting(Bmag):
+    figurebmag = plt.figure()
     #create the plot      
     plt.pcolormesh(xx, yy, Bmag.T, shading = 'auto')
     plt.xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8) 
@@ -92,16 +92,18 @@ def plotting():
 
 
 # #runs the code to output the B_func plot
-def run_B_plot(x, y):
+def run_B_plot():
     
     #fill the empty array with spatially varying B calculated from B_func
     for ix, x in enumerate(xx):
         for iy, y in enumerate(yy):
             B_z = (B_0 * x_0) / (x - x_c)  # Calculate B_z directly here
             Bmag[ix, iy] = B_z
-    print(Bmag.shape)
+    
+    #plotting(Bmag)
+    
     return Bmag
-    plotting()
+
 
 
 #kinetic energy equation, normalised
@@ -114,13 +116,30 @@ def kinetic_energy(m, v_x, v_y):
     
 def main():
     E_x = 0.0 
-    E_y = 0.01
+    E_y = 0.0
         
+    #velocity
     figure1 = plt.figure()
+    #kinetic energy
     figure2 = plt.figure()
+    #trajectory in x
+    figure3 = plt.figure()
+    #trajectory in y
+    figure4 = plt.figure()
     
     ax1 = figure1.add_subplot(1,1,1)
     ax2 = figure2.add_subplot(1,1,1)
+    
+    ax3 = figure3.add_subplot(1,1,1)
+    ax4=ax3.twinx().twiny()
+    
+    #ax5 = figure4.add_subplot(1,1,1)
+    #ax5=ax5.twinx()
+    
+    B_mag= run_B_plot()
+    ax3.pcolormesh(xx, yy, B_mag.T, shading = 'auto', zorder=0)
+    ax3.set_xlabel('x hat')
+    ax3.set_ylabel('y hat')
     
     for i in range(len(initial_x)):
         f0 = [initial_x[i], initial_y[i], initial_vx[i], initial_vy[i]]
@@ -132,19 +151,20 @@ def main():
         dx_dt = solution.y[2,:]
         dy_dt = solution.y[3,:]
         
-        
+        #plot the velocity component
         ax1.plot(time, dvx_dt, label='dvx_dt '+str(i))
         ax1.plot(time, dvy_dt, label='dvy_dt '+str(i))
-        
-        
+                
+        #solve kinetic energy and plot
         e_k = kinetic_energy(m[i], dx_dt, dy_dt)
-        
         ax2.plot(time, e_k, label =r'$E_k$ '+str(i))
         
+        #plot the trajectory in x
+        ax4.plot(dx_dt, dy_dt, zorder=10)
+        #plot the trajectory in y
+        #ax5.plot(time, dy_dt)
         
-        
-
-    #plotting()    
+         
     
     ax1.set_xlabel('Time')
     ax1.set_ylabel('Velocity components')
@@ -155,9 +175,19 @@ def main():
     ax2.set_xlabel('Time')
     ax2.set_ylabel('Kinetic energy')
     ax1.set_title('Kinetic energy of particle varying with time')
+    
+    #solve for background magnetic field
+   
+    ax4.set_xlabel('x')
+    ax4.set_ylabel('y')
    
     
+    #figure3.colorbar(, cax=ax4)
     plt.show()
+    
+    
+    
+    
     
     
     

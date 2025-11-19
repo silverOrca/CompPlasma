@@ -144,17 +144,17 @@ def main():
         solution = solve_ivp(dvdt, [time[0], time[-1]], f0, t_eval=time, args=(q[i], m[i], E_x, E_y))
         
         #set out solutions
-        dvx_dt = solution.y[0,:]
-        dvy_dt = solution.y[1,:]
-        dx_dt = solution.y[2,:]
-        dy_dt = solution.y[3,:]
+        x = solution.y[0,:]
+        y = solution.y[1,:]
+        v_x = solution.y[2,:]
+        v_y = solution.y[3,:]
         
         #plot the velocity component
-        ax1.plot(time, dvx_dt, label='dvx_dt '+str(i))
-        ax1.plot(time, dvy_dt, label='dvy_dt '+str(i))
+        ax1.plot(time, x, label='dvx_dt '+str(i))
+        ax1.plot(time, y, label='dvy_dt '+str(i))
                 
         #solve kinetic energy and plot
-        e_k = kinetic_energy(m[i], dx_dt, dy_dt)
+        e_k = kinetic_energy(m[i], v_x, v_y)
         
         #do final e_k / initial e_k for each particle
         print(e_k[-1]/e_k[0])
@@ -163,7 +163,7 @@ def main():
         ax2.plot(time, e_k, label =r'$E_k$ '+str(i))
         
         #plot the trajectory - y against x
-        ax4.plot(dx_dt, dy_dt, zorder=10)
+        ax4.plot(x, y, zorder=10)
 
         
          

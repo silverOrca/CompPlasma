@@ -129,15 +129,12 @@ def main():
     ax2 = figure2.add_subplot(1,1,1)
     
     ax3 = figure3.add_subplot(1,1,1)
-    ax4=ax3.twinx().twiny()
+    #ax4=ax3.twinx().twiny()
     
-    #ax5 = figure4.add_subplot(1,1,1)
-    #ax5=ax5.twinx()
-    
+    #solve for background magnetic field
     B_mag= run_B_plot()
     im = ax3.pcolormesh(xx, yy, B_mag.T, shading = 'auto', zorder=0)
-    ax3.set_xlabel('x hat')
-    ax3.set_ylabel('y hat')
+
     
     for i in range(len(initial_x)):
         f0 = [initial_x[i], initial_y[i], initial_vx[i], initial_vy[i]]
@@ -163,10 +160,9 @@ def main():
         ax2.plot(time, e_k, label =r'$E_k$ '+str(i))
         
         #plot the trajectory - y against x
-        ax4.plot(x, y, zorder=10)
+        ax3.plot(x, y, zorder=10)
 
-        
-         
+
     
     ax1.set_xlabel('Time')
     ax1.set_ylabel('Velocity components')
@@ -177,14 +173,12 @@ def main():
     ax2.set_xlabel('Time')
     ax2.set_ylabel('Kinetic energy')
     ax1.set_title('Kinetic energy of particle varying with time')
-    
-    #solve for background magnetic field
-   
-    ax4.set_xlabel('x')
-    ax4.set_ylabel('y')
-   
-    figure3.colorbar(im, ax=ax4, label='Magnetic field')
+
+    ax3.set_xlabel('x hat')
+    ax3.set_ylabel('y hat')
+    figure3.colorbar(im, ax=ax3, label='Magnetic field')
     plt.show()
+    
     
     
     

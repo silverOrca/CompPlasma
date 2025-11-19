@@ -8,8 +8,9 @@ Need to solve equations of motion for a single particle in the x and y direction
 """
 
 import matplotlib.pyplot as plt
-from numpy import zeros, linspace
+from numpy import zeros, linspace, asarray
 from scipy.integrate import solve_ivp
+
  
 
 #define how many spaces I want in x and y
@@ -113,10 +114,9 @@ def kinetic_energy(m, v_x, v_y):
     return e_k
 
 
+
     
-def main():
-    E_x = 0.0 
-    E_y = 0.01
+def main(E_x, E_y):
         
     #velocity
     figure1 = plt.figure()
@@ -129,7 +129,6 @@ def main():
     ax2 = figure2.add_subplot(1,1,1)
     
     ax3 = figure3.add_subplot(1,1,1)
-    #ax4=ax3.twinx().twiny()
     
     #solve for background magnetic field
     B_mag= run_B_plot()
@@ -154,7 +153,7 @@ def main():
         e_k = kinetic_energy(m[i], v_x, v_y)
         
         #do final e_k / initial e_k for each particle
-        print(e_k[-1]/e_k[0])
+        print('Kinetic energy for particle ' + str(i+1) + ': ' + str(e_k[-1]/e_k[0]))
         
         
         ax2.plot(time, e_k, label =r'$E_k$ '+str(i))
@@ -163,28 +162,30 @@ def main():
         ax3.plot(x, y, zorder=10)
 
 
-    
     ax1.set_xlabel('Time')
     ax1.set_ylabel('Velocity components')
     ax1.set_title('Velocity components of charged particle over time in varying B field')
     ax1.legend(loc='best')
     
-    
     ax2.set_xlabel('Time')
     ax2.set_ylabel('Kinetic energy')
-    ax1.set_title('Kinetic energy of particle varying with time')
+    ax2.set_title('Kinetic energy of particle varying with time')
 
     ax3.set_xlabel('x hat')
     ax3.set_ylabel('y hat')
+    ax3.set_title('Trajectories of particles over the background magnetic field')
     figure3.colorbar(im, ax=ax3, label='Magnetic field')
+    
     plt.show()
     
     
     
     
     
-    
-    
-    
 if __name__ == "__main__":
-    main()
+    
+    electric_fields = asarray([[0.0, 0.0], [0.0, 0.01]])
+    
+    for i in range(len(electric_fields)):
+        main(electric_fields[i][0], electric_fields[i][1])
+    

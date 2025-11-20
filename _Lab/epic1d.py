@@ -256,7 +256,8 @@ class Summary:
         # Amplitude of the first harmonic
         fh = 2.*abs(fft(d)[1]) / float(ncells)
         
-        print(f"Time: {t} First: {fh}")
+        #commented out printing because data is saved in file instead - speed code up
+        #print(f"Time: {t} First: {fh}")
         
         self.t.append(t)
         self.firstharmonic.append(fh)
@@ -295,9 +296,58 @@ def twostream(npart, L, vbeam=2):
     
     return pos,vel
 
-####################################################################
 
-if __name__ == "__main__":
+####################################################################
+#My own functions
+
+def saveData(L, ncells, npart, s):
+    #save code in a file
+    #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
+    #for which run of the code, make it so if a file exists with the other variables the same, it saves it with a number on end (e.g. 2 for 2nd go)
+    #L, ncells, npart
+    filename = 'L'+str(L)+'_ncells'+str(ncells)+' npart'+str(npart)+'run'
+    path = "C:\\Users\\zks524\\compPlasma-repo\\_Lab\\"+filename+".txt"
+    if os.path.isfile(filename):
+        #get number on end of filename
+        run_number = 2
+        while isfile(filename+str(run_number)):
+            run_number += 1
+        filename = filename + str(run_number)
+        
+        
+    with open(filename, "w") as f:
+        for times, amplitudes in zip(s.t, s.firstharmonic):
+            f.write(f"{times}\t{amplitudes}\n")
+            
+            
+    #add latest filename to file of all filenames     
+    with open('filenames.txt', 'a') as filenames:
+        filenames.write('\n'+str(filename))
+        
+    return filename
+
+
+def plotData(filename):
+    #load in data from file and plot it
+    
+    try:
+        with open(filename, 'r') as f:
+            times = []
+            amplitudes = []
+            for line in f:
+                p = line.split()
+                times.append(float(p[0]))
+                amplitudes.append(float(p[1]))
+                
+        plt.plot(times, amplitudes)
+        plt.show()
+                
+    except:
+        print('Failed to find and open file.')
+        
+        
+#gets the position and velocity data (amplitude)
+def generate_data():
     # Generate initial condition
     # 
     t1=time.time()
@@ -316,6 +366,7 @@ if __name__ == "__main__":
     # Create some output classes
     #p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
     s = Summary()                 # Calculates, stores and prints summary info
+    # Summary stores an array of the first-harmonic amplitude
 
     diagnostics_to_run = [s]   # Remove p to get much faster code! (the plotting)
     
@@ -324,40 +375,39 @@ if __name__ == "__main__":
                    out = diagnostics_to_run,        # These are called each output step
                    output_times=linspace(0.,20,50)) # The times to output
     
-    # Summary stores an array of the first-harmonic amplitude
+    filename = saveData(L, ncells, npart, s)
     
-    #save code in a file
-    #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
-    #for which run of the code, make it so if a file exists with the other variables the same, it saves it with a number on end (e.g. 2 for 2nd go)
-    #L, ncells, npart
-    filename = 'L'+str(L)+'_ncells'+str(ncells)+' npart'+str(npart)+'run'
-    path = "C:\\Users\\zks524\\compPlasma-repo\\_Lab\\"+filename+".txt"
-    if os.path.isfile(filename):
-        #get number on end of filename
-        run_number = 2
-        while isfile(filename+str(run_number)):
-            run_number += 1
-        filename = filename + str(run_number)
-        
-        
-    with open(filename, "w") as f:
-        for times, amplitudes in zip(s.t, s.firstharmonic):
-            f.write(f"{times}\t{amplitudes}\n")
-    
-    # Make a semilog plot to see exponential damping
-    plt.figure()
-    plt.plot(s.t, s.firstharmonic)
-    plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
-    plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-    plt.yscale('log')
-    
-    plt.title('Figure 3: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
-    
-    plt.ioff() # This so that the windows stay open
-    plt.show()
     
     t2=time.time()
     
     print('Time taken: '+str(t2-t1))
+    
+    
+    
+
+####################################################################
+
+if __name__ == "__main__":
+
+    #generate_data()
+    
+    with open('filenames.txt', 'r') as filenames:
+        for file in (filenames.readlines() [-1:]):
+            print(file)
+            plotData(file)
+    
+    # Make a semilog plot to see exponential damping
+    # plt.figure()
+    # plt.plot(s.t, s.firstharmonic)
+    # plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+    # plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
+    # plt.yscale('log')
+    
+    # plt.title('Figure 3: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+    
+    # plt.ioff() # This so that the windows stay open
+    # plt.show()
+    
+    
     
     

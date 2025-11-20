@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 #
 # Electrostatic PIC code in a 1D cyclic domain
-
+from genericpath import isfile
+import os
+import time
 from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
 
@@ -23,13 +25,18 @@ except:
 #-----------------------------------------------------------------------------#
 
 #rk4 method - does time integration
+#used to get positions and velocities at future times (over an amount of time)
 def rk4step(f, y0, dt, args=()):
     """ Takes a single step using RK4 method """
+    #f = rk4step(pic, f, dt, args=(ncells, L)) is when this is called
+        #f in calling is: f = concatenate( (pos, vel) ), the starting state
+    
     k1 = f(y0, *args)
     k2 = f(y0 + 0.5*dt*k1, *args)
     k3 = f(y0 + 0.5*dt*k2, *args)
     k4 = f(y0 + dt*k3, *args)
 
+    #4th order runga-kutta integration formula
     return y0 + (k1 + 2.*k2 + 2.*k3 + k4)*dt / 6.
 
 #-----------------------------------------------------------------------------#
@@ -61,10 +68,11 @@ def calc_density(position, ncells, L):
         offset = p - plower    # Offset from the left
         #adds 1 - the offset to the lefthand density (offset goes to current density)
         density[plower] += 1. - offset
-        #to current density modulus number of total cells ()
+        #current density modulus number of cells (remainder) add offset
         density[(plower + 1) % ncells] += offset
         
     # nparticles now distributed amongst ncells
+    #density constant throughout if the distribution is even
     density *= float(ncells) / float(nparticles)  # Make average density equal to 1
     
     return density
@@ -92,6 +100,9 @@ def periodic_interp(y, x):
     xl = ((xl % ny) + ny) % ny  # Ensures between 0 and ny-1 inclusive
     return y[xl]*(1. - dx) + y[(xl+1)%ny]*dx
 
+#-----------------------------------------------------------------------------#
+
+#used for calculating the electric field from a rho calculation
 def fft_integrate(y):
     """ Integrate a periodic function using FFTs
     """
@@ -113,7 +124,8 @@ def fft_integrate(y):
     f[0] = 0. # Set the arbitrary zero-frequency term to zero
     
     return ifft(f).real # Reverse Fourier Transform
-   
+ 
+#-----------------------------------------------------------------------------#
 
 def pic(f, ncells, L):
     """ f contains the position and velocity of all particles
@@ -131,12 +143,14 @@ def pic(f, ncells, L):
     density = calc_density(pos, ncells, L)
     
     # Subtract ion density to get total charge density
+    #Ion density normalised to 1 (large so assuming neutral background)
     rho = density - 1.
     
     # Calculate electric field
     E = -fft_integrate(rho)*dx
     
     # Interpolate E field at particle locations
+    #Because of normalisation, the rate of change of velocity (acceleration) is given by the -ve of E
     accel = -periodic_interp(E, pos/dx)
 
     # Put back into a single array
@@ -286,6 +300,7 @@ def twostream(npart, L, vbeam=2):
 if __name__ == "__main__":
     # Generate initial condition
     # 
+    t1=time.time()
     npart = 1000   
     if False:
         # 2-stream instability
@@ -299,10 +314,10 @@ if __name__ == "__main__":
         pos, vel = landau(npart, L)
     
     # Create some output classes
-    p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+    #p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
     s = Summary()                 # Calculates, stores and prints summary info
 
-    diagnostics_to_run = [p, s]   # Remove p to get much faster code!
+    diagnostics_to_run = [s]   # Remove p to get much faster code! (the plotting)
     
     # Run the simulation
     pos, vel = run(pos, vel, L, ncells, 
@@ -310,14 +325,39 @@ if __name__ == "__main__":
                    output_times=linspace(0.,20,50)) # The times to output
     
     # Summary stores an array of the first-harmonic amplitude
+    
+    #save code in a file
+    #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
+    #for which run of the code, make it so if a file exists with the other variables the same, it saves it with a number on end (e.g. 2 for 2nd go)
+    #L, ncells, npart
+    filename = 'L'+str(L)+'_ncells'+str(ncells)+' npart'+str(npart)+'run'
+    path = "C:\\Users\\zks524\\compPlasma-repo\\_Lab\\"+filename+".txt"
+    if os.path.isfile(filename):
+        #get number on end of filename
+        run_number = 2
+        while isfile(filename+str(run_number)):
+            run_number += 1
+        filename = filename + str(run_number)
+        
+        
+    with open(filename, "w") as f:
+        for times, amplitudes in zip(s.t, s.firstharmonic):
+            f.write(f"{times}\t{amplitudes}\n")
+    
     # Make a semilog plot to see exponential damping
     plt.figure()
     plt.plot(s.t, s.firstharmonic)
-    plt.xlabel("Time [Normalised]")
-    plt.ylabel("First harmonic amplitude [Normalised]")
+    plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+    plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
     plt.yscale('log')
+    
+    plt.title('Figure 3: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
     
     plt.ioff() # This so that the windows stay open
     plt.show()
+    
+    t2=time.time()
+    
+    print('Time taken: '+str(t2-t1))
     
     

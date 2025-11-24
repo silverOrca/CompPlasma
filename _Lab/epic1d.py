@@ -6,6 +6,8 @@ import os
 import time
 from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
+import numpy as np
+from scipy.signal import argrelextrema, find_peaks
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -300,6 +302,23 @@ def twostream(npart, L, vbeam=2):
 ####################################################################
 #My own functions
 
+
+    
+#finds each peak in the first harmonic data
+def findPeaks(amplitudes, times):
+    amplitudes=np.array(amplitudes)
+    times=np.array(times)
+
+    peaks, _ = find_peaks(amplitudes)
+        
+    peak_values=amplitudes[peaks]
+    time_values=times[peaks]
+    
+    #returns the amplitudes of each peak with its corresponding time value
+    return peak_values, time_values
+
+
+
 def saveData(L, ncells, npart, s):
     #save code in a file
     #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
@@ -338,12 +357,31 @@ def plotData(filename):
                 p = line.split()
                 times.append(float(p[0]))
                 amplitudes.append(float(p[1]))
-                
-        plt.plot(times, amplitudes)
-        plt.show()
-                
+        file = True
     except:
         print('Failed to find and open file.')
+    
+    if file:
+        #first, find the peaks
+        peak_values, time_values = findPeaks(amplitudes, times)
+
+        
+        #Make a semilog plot to see exponential damping, with peaks
+        plt.figure()
+        plt.plot(times, amplitudes, label='Raw values')
+        plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+        plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+        plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
+        plt.yscale('log')
+        
+        plt.title('Figure 4: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+        plt.legend(loc='best')
+        plt.grid(alpha=0.3)
+        plt.ioff() # This so that the windows stay open - disables interactive mode
+        plt.show()
+        
+        
+   
         
         
 #gets the position and velocity data (amplitude)
@@ -392,21 +430,11 @@ if __name__ == "__main__":
     #generate_data()
     
     with open('filenames.txt', 'r') as filenames:
-        for file in (filenames.readlines() [-1:]):
+        for file in (filenames.readlines() [-1:]): #remove the -1 if I want to use all files
             print(file)
             plotData(file)
     
-    # Make a semilog plot to see exponential damping
-    # plt.figure()
-    # plt.plot(s.t, s.firstharmonic)
-    # plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
-    # plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-    # plt.yscale('log')
-    
-    # plt.title('Figure 3: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
-    
-    # plt.ioff() # This so that the windows stay open
-    # plt.show()
+
     
     
     

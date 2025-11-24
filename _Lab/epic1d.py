@@ -302,21 +302,54 @@ def twostream(npart, L, vbeam=2):
 ####################################################################
 #My own functions
 
-
+def separateNoise(peaks, noisePeak, amplitudes, times):
     
+    #find minima values to use for removing the noise peak at minima
+    minima, _ = find_peaks(-amplitudes)
+    
+    #find the minima just before the noisy peak
+    #it will have the same location in the array as the peak index
+    index = np.where(peaks == noisePeak)
+    
+    removeMinima = minima[index]
+    removeMinima = removeMinima[0]
+    
+    #now get all amplitude and time data from this point onwards
+    noiseData = amplitudes[removeMinima:]
+    noiseTime = times[removeMinima:]
+    
+    #get all good data from this point backwards
+    goodData = amplitudes[0:removeMinima-1]
+    goodTime = times[0:removeMinima-1]
+    
+    return noiseData, goodData, noiseTime, goodTime
+
+
+
+def locateNoise(peak_values, peaks):
+
+    #iterates over peaks to find the first one that is greater than the last one
+    for i in range(len(peak_values)):
+        if i != 0:
+            if peak_values[i] > peak_values[i-1]:
+                noisePeakValue = peak_values[i]
+                noisePeak = peaks[i]
+                break
+      
+    return noisePeakValue, noisePeak
+
+
 #finds each peak in the first harmonic data
 def findPeaks(amplitudes, times):
-    amplitudes=np.array(amplitudes)
-    times=np.array(times)
 
     peaks, _ = find_peaks(amplitudes)
+    
         
     peak_values=amplitudes[peaks]
     time_values=times[peaks]
     
     #returns the amplitudes of each peak with its corresponding time value
-    return peak_values, time_values
-
+    return peak_values, time_values, peaks
 
 
 def saveData(L, ncells, npart, s):
@@ -348,11 +381,12 @@ def saveData(L, ncells, npart, s):
 
 def plotData(filename):
     #load in data from file and plot it
+    file=False
+    times = []
+    amplitudes = []
     
     try:
         with open(filename, 'r') as f:
-            times = []
-            amplitudes = []
             for line in f:
                 p = line.split()
                 times.append(float(p[0]))
@@ -362,14 +396,26 @@ def plotData(filename):
         print('Failed to find and open file.')
     
     if file:
+        times=np.asarray(times)
+        amplitudes=np.asarray(amplitudes)
         #first, find the peaks
-        peak_values, time_values = findPeaks(amplitudes, times)
+        peak_values, time_values, peaks = findPeaks(amplitudes, times)
+        
+        #next, find where the next peak is greater than last peak
+        noisePeakValue, noisePeak = locateNoise(peak_values, peaks)
 
+        #now separate the two sides of the data
+        #should separate the whole peak, so find the minima point before the noise peak
+        noiseData, goodData, noiseTime, goodTime = separateNoise(peaks, noisePeak, amplitudes, times)
         
         #Make a semilog plot to see exponential damping, with peaks
         plt.figure()
-        plt.plot(times, amplitudes, label='Raw values')
+        plt.plot(times, amplitudes, color='black', label='Raw values')
         plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+        
+        plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
+        plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
+        
         plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
         plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
         plt.yscale('log')

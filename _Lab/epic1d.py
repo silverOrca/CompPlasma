@@ -312,6 +312,7 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
     index = np.where(peaks == noisePeak)
     
     removeMinima = minima[index]
+    #need to get value because is currently as array
     removeMinima = removeMinima[0]
     
     #now get all amplitude and time data from this point onwards
@@ -420,7 +421,7 @@ def plotData(filename):
         plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
         plt.yscale('log')
         
-        plt.title('Figure 4: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+        plt.title('Figure 5: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
         plt.legend(loc='best')
         plt.grid(alpha=0.3)
         plt.ioff() # This so that the windows stay open - disables interactive mode

@@ -323,6 +323,14 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
     goodData = amplitudes[0:removeMinima-1]
     goodTime = times[0:removeMinima-1]
     
+    #iterate over noisy peaks to take rms (noise amplitude level)
+    totalNoiseSquared = 0.
+    for peak in peaks:
+        totalNoiseSquared += (amplitudes[peak])**2
+    averageNoise = totalNoiseSquared/len(peaks)
+    rms = sqrt(averageNoise)
+    print(rms)
+    
     return noiseData, goodData, noiseTime, goodTime
 
 
@@ -428,7 +436,6 @@ def plotData(filename):
         plt.show()
         
         
-   
         
         
 #gets the position and velocity data (amplitude)

@@ -8,7 +8,6 @@ from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
 import numpy as np
 from scipy.signal import argrelextrema, find_peaks
-from scipy.optimize import curve_fit
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -398,24 +397,56 @@ def getFrequency(goodPeaks, goodTime):
     
     
 #plot a line across the good peaks to get damping
-def dampingEq(x, m, a, b):
+def dampingEq(m, a, x, b):
     return m * np.exp(-a * x) + b
 
-def getDamping(goodTime, goodData):
+def getDamping():
     #initial values
-    mguess = 0.25
-    aguess = 0.1
-    bguess = 0
-    p0=[mguess, aguess, bguess]
-    popt, pcov = curve_fit(dampingEq, goodTime, goodData, p0)
+    m = 0.25
+    a = 0.1
+    b = 
     
-    x_fitting = np.linspace(goodTime.min(), goodTime.max(), 100)
-    y_fitted = dampingEq(x_fitting, *popt)
     
-    return x_fitting, y_fitted
 
 
-def plotData(filename, dampingLine=True):
+def plotData(filename, ):
+        #Make a semilog plot to see exponential damping, with peaks
+        plt.figure()
+        
+        if plotAll:
+            #plot the raw data
+            plt.plot(times, amplitudes, color='black', label='Raw values')
+            
+        if plotPeaks:
+            #plot x's where the peaks are
+            plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+            
+        if plotNoise:
+            #plot the noise-dominated data in a red dashed line
+            plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
+            
+        if plotGood:
+            #plot the useful data in a green dashed line
+            plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
+        
+        if dampingLine:
+            poly, coeffs = getDamping(goodPeaks, goodData, goodTime)
+            plt.plot(goodTime, poly(goodTime), label='fit')
+
+
+        plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+        plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
+        #plt.yscale('log')
+        
+        plt.title('Figure 6: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+        plt.legend(loc='best')
+        plt.grid(alpha=0.3)
+        plt.ioff() # This so that the windows stay open - disables interactive mode
+        plt.show()
+        
+        
+
+def getData(file, dampingLine=True):
     #load in data from file and plot it
     file=False
     times = []
@@ -437,48 +468,14 @@ def plotData(filename, dampingLine=True):
         #first, find the peaks (peaks variable is indices of peaks)
         peak_values, time_values, peaks = findPeaks(amplitudes, times)
         
-        
         #next, find where the next peak is greater than last peak
         noisePeakValue, noisePeak = locateNoise(peak_values, peaks)
 
         #now separate the two sides of the data
         #should separate the whole peak, so find the minima point before the noise peak
         noiseData, goodData, noiseTime, goodTime, goodPeaks = separateNoise(peaks, noisePeak, amplitudes, times)
-        
-        goodPeakValues = goodData[goodPeaks]
-        goodTimeValues = goodTime[goodPeaks]
-        
-        
-        #Make a semilog plot to see exponential damping, with peaks
-        plt.figure()
-        if dampingLine:
-            x ,y = getDamping(goodTime, goodData)
-            plt.plot(x, y, label='fit')
-            
-        
-        #plot the raw data
-        #plt.plot(times, amplitudes, color='black', label='Raw values')
-        #plot x's where the peaks are
-        #plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
-        #plot the noise-dominated data in a red dashed line
-        #plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
-        
-        #plot the useful data in a green dashed line
-        plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
-        plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
-        
-        plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
-        plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-        #plt.yscale('log')
-        
-        plt.title('Figure 8: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
-        plt.legend(loc='best')
-        plt.grid(alpha=0.3)
-        plt.ioff() # This so that the windows stay open - disables interactive mode
-        plt.show()
-        
-        return goodPeaks, goodData, goodTime
-
+    
+    return goodPeaks, goodData, goodTime
 
         
 def saveData(L, ncells, npart, s):
@@ -556,7 +553,7 @@ if __name__ == "__main__":
     with open('filenames.txt', 'r') as filenames:
         for file in (filenames.readlines() [-1:]): #remove the -1 if I want to use all files
             print(file)
-            goodPeaks, goodData, goodTime = plotData(file, dampingLine=True)
+            goodPeaks, goodData, goodTime = getData(file, dampingLine=True)
             getFrequency(goodPeaks, goodTime)
             
 

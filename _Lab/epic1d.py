@@ -309,9 +309,9 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
     
     #find the minima just before the noisy peak
     #it will have the same location in the array as the peak index
-    index = np.where(peaks == noisePeak)
+    indexMin = np.where(peaks == noisePeak)
     
-    removeMinima = minima[index]
+    removeMinima = minima[indexMin]
     #need to get value because is currently as array
     removeMinima = removeMinima[0]
     
@@ -319,11 +319,15 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
     noiseData = amplitudes[removeMinima:]
     noiseTime = times[removeMinima:]
     
-    #get all good data from this point backwards
-    goodData = amplitudes[0:removeMinima-1]
-    goodTime = times[0:removeMinima-1]
+    #get all good data from start until this point
+    goodData = amplitudes[0:removeMinima]
+    goodTime = times[0:removeMinima]
     
-    #iterate over noisy peaks to take rms (noise amplitude level)
+    #for use in finding frequency - list of good peaks
+    indexMin = indexMin[0][0]
+    goodPeaks = peaks[0:indexMin]
+    
+    #iterate over noisy peaks to take rms for finding noise amplitude level
     totalNoiseSquared = 0.
     for peak in peaks:
         totalNoiseSquared += (amplitudes[peak])**2
@@ -331,7 +335,7 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
     rms = sqrt(averageNoise)
     print(rms)
     
-    return noiseData, goodData, noiseTime, goodTime
+    return noiseData, goodData, noiseTime, goodTime, goodPeaks
 
 
 
@@ -340,11 +344,11 @@ def locateNoise(peak_values, peaks):
     #iterates over peaks to find the first one that is greater than the last one
     for i in range(len(peak_values)):
         if i != 0:
-            if peak_values[i] > peak_values[i-1]:
+            if peak_values[i] >= peak_values[i-1]:
                 noisePeakValue = peak_values[i]
                 noisePeak = peaks[i]
                 break
-      
+
     return noisePeakValue, noisePeak
 
 
@@ -361,6 +365,92 @@ def findPeaks(amplitudes, times):
     return peak_values, time_values, peaks
 
 
+#find the angular frequency of the peaks (using only good non-noise-dominated data)
+#need the values of the goodTime values at each good peak - take average
+#get error from variance between the period (slightly different between each peak)
+def getFrequency(goodPeaks, goodData, goodTime):
+    periods = []
+    #first find the average period, then inverse for frequency
+    #don't calculate for first peak because there isn't a peak before it
+    for i, peak in enumerate(goodPeaks[1:]):
+        prevPeak = goodPeaks[i]
+        periods.append(goodTime[peak] - goodTime[prevPeak])
+
+
+    avgPeriod = sum(periods) / len(periods)
+    #in radians because of time normalisation
+    avgFreq = 1 / avgPeriod
+    
+    #calculate the variance for the s.d. of the mean for uncertainty
+    variance=0.
+    for p in periods:
+        variance += (p-avgPeriod)**2
+
+    #s.d. equation
+    sigmaPeriod = sqrt(variance/(len(periods)-1))
+    
+    #convert to frequency error  
+    sigmaFreq = sigmaPeriod / avgPeriod**2
+
+
+    print(f"Frequency (radians): {avgFreq} +/- {sigmaFreq}")
+    
+    
+
+
+def plotData(filename):
+    #load in data from file and plot it
+    file=False
+    times = []
+    amplitudes = []
+    
+    try:
+        with open(filename, 'r') as f:
+            for line in f:
+                p = line.split()
+                times.append(float(p[0]))
+                amplitudes.append(float(p[1]))
+        file = True
+    except:
+        print('Failed to find and open file.')
+    
+    if file:
+        times=np.asarray(times)
+        amplitudes=np.asarray(amplitudes)
+        #first, find the peaks (peaks variable is indices of peaks)
+        peak_values, time_values, peaks = findPeaks(amplitudes, times)
+        
+        #next, find where the next peak is greater than last peak
+        noisePeakValue, noisePeak = locateNoise(peak_values, peaks)
+
+        #now separate the two sides of the data
+        #should separate the whole peak, so find the minima point before the noise peak
+        noiseData, goodData, noiseTime, goodTime, goodPeaks = separateNoise(peaks, noisePeak, amplitudes, times)
+        
+        #Make a semilog plot to see exponential damping, with peaks
+        plt.figure()
+        #plot the raw data
+        plt.plot(times, amplitudes, color='black', label='Raw values')
+        #plot x's where the peaks are
+        plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+        #plot the noise-dominated data in a red dashed line
+        plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
+        #plot the useful data in a green dashed line
+        plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
+        
+        plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+        plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
+        plt.yscale('log')
+        
+        plt.title('Figure 5: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+        plt.legend(loc='best')
+        plt.grid(alpha=0.3)
+        plt.ioff() # This so that the windows stay open - disables interactive mode
+        plt.show()
+        
+        return goodPeaks, goodData, goodTime
+     
+        
 def saveData(L, ncells, npart, s):
     #save code in a file
     #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
@@ -386,57 +476,7 @@ def saveData(L, ncells, npart, s):
         filenames.write('\n'+str(filename))
         
     return filename
-
-
-def plotData(filename):
-    #load in data from file and plot it
-    file=False
-    times = []
-    amplitudes = []
-    
-    try:
-        with open(filename, 'r') as f:
-            for line in f:
-                p = line.split()
-                times.append(float(p[0]))
-                amplitudes.append(float(p[1]))
-        file = True
-    except:
-        print('Failed to find and open file.')
-    
-    if file:
-        times=np.asarray(times)
-        amplitudes=np.asarray(amplitudes)
-        #first, find the peaks
-        peak_values, time_values, peaks = findPeaks(amplitudes, times)
-        
-        #next, find where the next peak is greater than last peak
-        noisePeakValue, noisePeak = locateNoise(peak_values, peaks)
-
-        #now separate the two sides of the data
-        #should separate the whole peak, so find the minima point before the noise peak
-        noiseData, goodData, noiseTime, goodTime = separateNoise(peaks, noisePeak, amplitudes, times)
-        
-        #Make a semilog plot to see exponential damping, with peaks
-        plt.figure()
-        plt.plot(times, amplitudes, color='black', label='Raw values')
-        plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
-        
-        plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
-        plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
-        
-        plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
-        plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-        plt.yscale('log')
-        
-        plt.title('Figure 5: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
-        plt.legend(loc='best')
-        plt.grid(alpha=0.3)
-        plt.ioff() # This so that the windows stay open - disables interactive mode
-        plt.show()
-        
-        
-        
+      
         
 #gets the position and velocity data (amplitude)
 def generate_data():
@@ -486,8 +526,8 @@ if __name__ == "__main__":
     with open('filenames.txt', 'r') as filenames:
         for file in (filenames.readlines() [-1:]): #remove the -1 if I want to use all files
             print(file)
-            plotData(file)
-    
+            goodPeaks, goodData, goodTime = plotData(file)
+            getFrequency(goodPeaks, goodData, goodTime)
 
     
     

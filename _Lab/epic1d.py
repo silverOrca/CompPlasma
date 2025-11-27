@@ -398,19 +398,31 @@ def getFrequency(goodPeaks, goodTime):
     
     
 #plot a line across the good peaks to get damping
-def dampingEq(x, m, a, b):
-    return m * np.exp(-a * x) + b
+def dampingEq(x, m, d):
+    return m * np.exp(-d * x)
 
 def getDamping(goodTime, goodData):
-    #initial values
-    mguess = 0.25
-    aguess = 0.1
-    bguess = 0
-    p0=[mguess, aguess, bguess]
+    #initial values - m is the y intercept, and d is the damping coefficient
+    mguess = goodTime[0]
+    dguess = 0.1
+
+    p0=[mguess, dguess]
     popt, pcov = curve_fit(dampingEq, goodTime, goodData, p0)
     
     x_fitting = np.linspace(goodTime.min(), goodTime.max(), 100)
     y_fitted = dampingEq(x_fitting, *popt)
+    
+    #calculate R^2 value for the fit
+    y_predicted = dampingEq(goodTime, *popt)  # Use fitted parameters
+    ss_res = np.sum(np.square(goodData - y_predicted))
+    ss_tot = np.sum(np.square(goodData - np.mean(goodData)))
+    r_squared = 1 - (ss_res / ss_tot)
+    print(f"R^2 value of the fit is: {r_squared}")
+    
+    #get error in damping
+    errors = np.sqrt(np.diag(pcov))
+    dampingError = errors[1]
+    print(f"The damping coefficient is: {popt[1]} +/- {dampingError}")
     
     return x_fitting, y_fitted
 
@@ -452,7 +464,7 @@ def plotData(filename, dampingLine=True):
         #Make a semilog plot to see exponential damping, with peaks
         plt.figure()
         if dampingLine:
-            x ,y = getDamping(goodTime, goodData)
+            x ,y = getDamping(goodTimeValues, goodPeakValues)
             plt.plot(x, y, label='fit')
             
         
@@ -469,9 +481,9 @@ def plotData(filename, dampingLine=True):
         
         plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
         plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-        #plt.yscale('log')
+        plt.yscale('log')
         
-        plt.title('Figure 8: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+        plt.title('Figure 11: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
         plt.legend(loc='best')
         plt.grid(alpha=0.3)
         plt.ioff() # This so that the windows stay open - disables interactive mode

@@ -79,7 +79,7 @@ def B_func(x, y, x_0, x_c, B_0):
 
 #to plot anything needed
 def plotting(Bmag):
-    figurebmag = plt.figure()
+    plt.figure()
     #create the plot      
     plt.pcolormesh(xx, yy, Bmag.T, shading = 'auto')
     plt.xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8) 
@@ -94,14 +94,13 @@ def run_B_plot(bPlot=False):
     #fill the empty array with spatially varying B calculated from B_func
     for ix, x in enumerate(xx):
         for iy, y in enumerate(yy):
-            B_z = (B_0 * x_0) / (x - x_c)  # Calculate B_z directly here
+            B_z = B_func(x, y, x_0, x_c, B_0)
             Bmag[ix, iy] = B_z
     
     if bPlot:
         plotting(Bmag)
     
     return Bmag
-
 
 
 #kinetic energy equation, normalised
@@ -112,8 +111,9 @@ def kinetic_energy(m, v_x, v_y):
 
 
     
-def main(E_x, E_y):
-        
+def integrate_and_plot(E_x, E_y, B_mag):
+    #solve for background magnetic field
+    
     #kinetic energy
     ek_plot = plt.figure()
     #trajectory in x and y
@@ -124,11 +124,8 @@ def main(E_x, E_y):
     
     trajectory_axis = trajectory_plot.add_subplot(1,1,1)
     
-    #solve for background magnetic field
-    B_mag= run_B_plot()
     #choosing B colour to better see the trajectories
     im = trajectory_axis.pcolormesh(xx, yy, B_mag.T, shading = 'auto', cmap='bone')
-    
     
 
     for i in range(len(initial_x)):
@@ -171,7 +168,7 @@ def main(E_x, E_y):
     trajectory_axis.text(-5, -12, traj_caption, fontsize=8)
     trajectory_axis.set_title('Trajectories of particles over the background magnetic field')
     trajectory_plot.colorbar(im, ax=trajectory_axis, label=r'Magnetic field, $\hat{B}$, normalised to')
-    
+
     plt.show()
     
     
@@ -180,10 +177,10 @@ def main(E_x, E_y):
     
 if __name__ == "__main__":#
 
-    run_B_plot(bPlot=True)
+    B_mag = run_B_plot(bPlot=True)
     
     electric_fields = asarray([[0.0, 0.0], [0.0, 0.01]])
     
     for i in range(len(electric_fields)):
-        main(electric_fields[i][0], electric_fields[i][1])
+        integrate_and_plot(electric_fields[i][0], electric_fields[i][1], B_mag)
     

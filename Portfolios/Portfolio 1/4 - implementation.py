@@ -65,8 +65,7 @@ def dvdt(curT, curF, q, m, E_x=0, E_y=0):
     
     return [dx_dt, dy_dt, dvx_dt, dvy_dt]
     
-    
-    
+   
 
 #example of a magnetic field varying with position
 def B_func(x, y, x_0, x_c, B_0):
@@ -130,10 +129,12 @@ def main(E_x, E_y):
     #choosing B colour to better see the trajectories
     im = trajectory_axis.pcolormesh(xx, yy, B_mag.T, shading = 'auto', cmap='bone')
     
-    traj_caption = r'Electric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+'), normalised to .\n'
+    
 
     for i in range(len(initial_x)):
+        #define the current initial set of parameters
         f0 = [initial_x[i], initial_y[i], initial_vx[i], initial_vy[i]]
+        #integrate the equation to get velocity and trajectory
         solution = solve_ivp(dvdt, [time[0], time[-1]], f0, t_eval=time, args=(q[i], m[i], E_x, E_y))
         
         #set out solutions
@@ -146,29 +147,30 @@ def main(E_x, E_y):
         e_k = kinetic_energy(m[i], v_x, v_y)
         
         #do final e_k / initial e_k for each particle
-        print('Kinetic energy for particle ' + str(i+1) + ': ' + str(e_k[-1]/e_k[0]))
+        print('E_k,final/E_k,initial for particle ' + str(i+1) + ': ' + str(e_k[-1]/e_k[0]))
         
-        ek_axis.plot(time, e_k, label =r'$E_{k,x} = $ '+str(E_x)+r', $E_{k,y} = $'+str(E_y))
+        ek_axis.plot(time, e_k, label =r'$E_{x} = $ '+str(E_x)+r', $E_{y} = $'+str(E_y))
         
         #plot the trajectory - y against x
-        trajectory_axis.plot(x, y, label='Particle '+str(i+1))
-        traj_caption += 'Particle '+str(i+1)+': Initial x = '+str(initial_x[i])+', initial y = '+str(initial_y[i])+r', initial $\hat{v}_x$'+str(initial_vx[i])+r', initial $\hat{v}_y$'+str(initial_vy[i])+', charge = '+str(q[i])+', mass = '+str(m[i]) +'\n' 
+        trajectory_axis.plot(x, y, label='Particle '+str(i+1)+r': Initial $\hat{x}$ = '+str(initial_x[i])+r', initial $\hat{y}$ = '+str(initial_y[i])+r', initial $\hat{v}_x$ = '+str(initial_vx[i])+r', initial $\hat{v}_y$ = '+str(initial_vy[i])+r', charge $(\hat{q})$ = '+str(q[i])+r', mass $(\hat{m})$ = '+str(m[i]))
 
     #e_k axes labelling
-    ek_axis.set_xlabel('Timec, normalised to')
-    ek_axis.set_ylabel('Kinetic energy, normalised to')
-    ek_axis.legend(loc='best')
+    ek_axis.set_xlabel(r'Time (s), normalised to the thermal Hydrogen gyro-period, $\tau_H$')
+    ek_axis.set_ylabel(r'Kinetic energy, $\hat{E}_k$, normalised to')
+    ek_axis.legend(loc='center right', bbox_to_anchor=(1.4, 0.5))
     ek_axis.grid(alpha=0.3)
-    ek_axis.set_title('Kinetic energy of particle varying with time')
+    ek_axis.set_title('Kinetic energy of particles varying with time')
 
     #trajectory axes labelling
     trajectory_axis.set_xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8)
-    trajectory_axis.legend(loc='upper right')
     trajectory_axis.set_ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
     trajectory_axis.grid(alpha=0.3)
-    trajectory_axis.text(-10, -22, traj_caption, fontsize=8)
+    trajectory_axis.legend(loc='lower center', bbox_to_anchor=(0.5,-0.6))
+    
+    traj_caption = r'Fig Electric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+'), normalised to .\n'
+    trajectory_axis.text(-5, -12, traj_caption, fontsize=8)
     trajectory_axis.set_title('Trajectories of particles over the background magnetic field')
-    trajectory_plot.colorbar(im, ax=trajectory_axis, label='Magnetic field')
+    trajectory_plot.colorbar(im, ax=trajectory_axis, label=r'Magnetic field, $\hat{B}$, normalised to')
     
     plt.show()
     

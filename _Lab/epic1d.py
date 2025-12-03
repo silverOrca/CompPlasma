@@ -334,7 +334,7 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
         totalNoiseSquared += (amplitudes[peak])**2
     averageNoise = totalNoiseSquared/len(peaks)
     rms = sqrt(averageNoise)
-    print(f'Noise amplitude: {rms}')
+    #print(f'Noise amplitude: {rms}')
     
     return noiseData, goodData, noiseTime, goodTime, goodPeaks
 
@@ -345,7 +345,8 @@ def locateNoise(peak_values, peaks):
     #iterates over peaks to find the first one that is greater than the last one
     for i in range(len(peak_values)):
         if i != 0:
-            if peak_values[i] >= peak_values[i-1]:
+            #if they are the same to 2 decimal places then treat as equal (otherwise can't find fit)
+            if round(peak_values[i], 2) >= round(peak_values[i-1], 2):
                 noisePeakValue = peak_values[i]
                 noisePeak = peaks[i]
                 break
@@ -405,12 +406,13 @@ def getFrequency(goodPeaks, goodTime):
 def dampingEq(x, m, d):
     return m * np.exp(-d * x)
 
-def getDamping(goodTime, goodData):
-    #initial values - m is the y intercept, and d is the damping coefficient
-    mguess = goodTime[0]
+def getDamping(goodTime, goodData, amplitudes):
+    #initial values - a0 is the y intercept, and d is the damping coefficient
+    a0guess = amplitudes[0]
     dguess = 0.1
+    
 
-    p0=[mguess, dguess]
+    p0=[a0guess, dguess]
     popt, pcov = curve_fit(dampingEq, goodTime, goodData, p0)
     
     x_fitting = np.linspace(goodTime.min(), goodTime.max(), 100)
@@ -465,46 +467,52 @@ def plotData(filename):
         goodPeakValues = goodData[goodPeaks]
         goodTimeValues = goodTime[goodPeaks]
         
+        #if there is more than two peaks it can calculate frequency and damping
+        if len(goodPeakValues) > 2:
         
-        #Make a semilog plot to see exponential damping, with peaks
-        plt.figure()
         
-        #calculate the damping and plot the line
-        x ,y, dampCo, dampErr = getDamping(goodTimeValues, goodPeakValues)
-        plt.plot(x, y, label='fit')
+            #Make a semilog plot to see exponential damping, with peaks
+            plt.figure(figsize=(10,8))
             
-        
-        #plot the raw data
-        #plt.plot(times, amplitudes, color='black', label='Raw values')
-        #plot x's where the peaks are
-        #plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
-        #plot the noise-dominated data in a red dashed line
-        #plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
-        
-        #plot the useful data in a green dashed line
-        plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
-        plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
-        #label each peak with coordinates
-        for i in range(len(goodTimeValues)):
-            txt = f'  ({goodTimeValues[i]:.2f}, {goodPeakValues[i]:.2f})'
-            plt.annotate(txt, (goodTimeValues[i], goodPeakValues[i]), color='blue', size=7)
-        
-        plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
-        plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-        plt.yscale('log')
-        
-        plt.title(f'Figure {filename}: Plot of normalised first harmonic amplitude\n against normalised time, for an electric field wave propogating through a plasma.')
-        plt.legend(loc='upper right')
-        plt.grid(alpha=0.3)
-        plt.ioff() # This so that the windows stay open - disables interactive mode
-        plt.show()
-        
-        #calculate frequency
-        avgFreq, sigmaFreq = getFrequency(goodPeaks, goodTime)
+            #calculate the damping and plot the line
+            #only passes in the peak values
+            x ,y, dampCo, dampErr = getDamping(goodTimeValues, goodPeakValues, amplitudes)
+            plt.plot(x, y, label='fit')
+                
+            
+            #plot the raw data
+            #plt.plot(times, amplitudes, color='black', label='Raw values')
+            #plot x's where the peaks are
+            #plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+            #plot the noise-dominated data in a red dashed line
+            #plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
+            
+            #plot the useful data in a green dashed line
+            plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
+            plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
+            #label each peak with coordinates
+            for i in range(len(goodTimeValues)):
+                txt = f'  ({goodTimeValues[i]:.2f}, {goodPeakValues[i]:.2f})'
+                plt.annotate(txt, (goodTimeValues[i], goodPeakValues[i]), color='blue', size=7)
+            
+            plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+            plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
+            plt.yscale('log')
+            
+            plt.title(f'Figure {filename}: Plot of normalised first harmonic amplitude\n against normalised time, for an electric field wave propogating through a plasma.')
+            plt.legend(loc='upper right')
+            plt.grid(alpha=0.3)
+            plt.ioff() # This so that the windows stay open - disables interactive mode
+            plt.show()
+            
+            #calculate frequency
+            avgFreq, sigmaFreq = getFrequency(goodPeaks, goodTime)
+            
+        else:
+            avgFreq=0; sigmaFreq=0; dampCo=0; dampErr=0
         
     
     else:
-        print('That is it')
         avgFreq=0; sigmaFreq=0; dampCo=0; dampErr=0
         
     #returns the frequency and damping with errors
@@ -575,6 +583,8 @@ def generate_data():
     
     print('Time taken: '+str(t2-t1))
     
+    return filename
+    
     
     
 
@@ -586,14 +596,36 @@ if __name__ == "__main__":
     #for i in range (3):
      #   generate_data()
     
-    with open('filenames.txt', 'r') as filenames:
-        for file in (filenames.readlines()): #remove the -1 if I want to use all files
-            #filename currently might have '\n' on end so remove this first
-            file = file.strip()
-            print(f'Current file: {file}')
-            avgFreq, sigmaFreq, dampCo, dampErr = plotData(file)
+    # with open('filenames.txt', 'r') as filenames:
+    #     for file in (filenames.readlines()): #remove the -1 if I want to use all files
+    #         #filename currently might have '\n' on end so remove this first
+    #         file = file.strip()
+    #         print(f'Current file: {file}')
+    #         avgFreq, sigmaFreq, dampCo, dampErr = plotData(file)
             
-    
+
+    for i in range(5):
+        avgFreq=0; sigmaFreq=0; dampCo=0; dampErr = 0
+        #to know if it is repeating on a particular value of i, to delete prev data
+        #set to true if on a repeated i
+        repeated = False
+        while (avgFreq == 0) and (sigmaFreq==0) and (dampCo==0) and (dampErr == 0):
+            #first delete previous line in file and the data file
+            #this is to keep data volume manageable
+            if repeated:
+                with open('filenames.txt', 'r+') as filenames:
+                    lines = filenames.readlines()
+                    os.remove(lines[-1])
+                    filenames.writelines(lines[:-1])
+
+            #now if the values are 0 it will delete that data file and its name in filenames.txt
+            repeated = True
+        
+            filename = generate_data()
+            
+            avgFreq, sigmaFreq, dampCo, dampErr = plotData(filename)
+            
+            
     
     
     

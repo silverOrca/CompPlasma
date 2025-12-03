@@ -334,7 +334,7 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
         totalNoiseSquared += (amplitudes[peak])**2
     averageNoise = totalNoiseSquared/len(peaks)
     rms = sqrt(averageNoise)
-    print(rms)
+    print(f'Noise amplitude: {rms}')
     
     return noiseData, goodData, noiseTime, goodTime, goodPeaks
 
@@ -395,11 +395,13 @@ def getFrequency(goodPeaks, goodTime):
     #convert to frequency error  
     sigmaFreq = sigmaPeriod / avgPeriod**2
 
-
     print(f"Angular frequency (normalised to omega_p): {avgFreq:.2f} +/- {sigmaFreq:.2f}")
+    
+    return avgFreq, sigmaFreq
     
     
 #plot a line across the good peaks to get damping
+#damping equation is exponential decay
 def dampingEq(x, m, d):
     return m * np.exp(-d * x)
 
@@ -426,16 +428,17 @@ def getDamping(goodTime, goodData):
     dampingError = errors[1]
     print(f"The damping coefficient is: {popt[1]:.2f} +/- {dampingError:.2f}")
     
-    return x_fitting, y_fitted
+    return x_fitting, y_fitted, popt[1], dampingError
 
-
-def plotData(filename, dampingLine=True):
+#main flow of solving for values and plotting the data
+def plotData(filename):
     #load in data from file and plot it
     file=False
     times = []
     amplitudes = []
     
     try:
+        #open file and separate into amplitudes and times lists
         with open(filename, 'r') as f:
             for line in f:
                 p = line.split()
@@ -465,9 +468,10 @@ def plotData(filename, dampingLine=True):
         
         #Make a semilog plot to see exponential damping, with peaks
         plt.figure()
-        if dampingLine:
-            x ,y = getDamping(goodTimeValues, goodPeakValues)
-            plt.plot(x, y, label='fit')
+        
+        #calculate the damping and plot the line
+        x ,y, dampCo, dampErr = getDamping(goodTimeValues, goodPeakValues)
+        plt.plot(x, y, label='fit')
             
         
         #plot the raw data
@@ -489,13 +493,22 @@ def plotData(filename, dampingLine=True):
         plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
         plt.yscale('log')
         
-        plt.title('Figure 11: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
+        plt.title(f'Figure {filename}: Plot of normalised first harmonic amplitude\n against normalised time, for an electric field wave propogating through a plasma.')
         plt.legend(loc='upper right')
         plt.grid(alpha=0.3)
         plt.ioff() # This so that the windows stay open - disables interactive mode
         plt.show()
         
-        return goodPeaks, goodData, goodTime
+        #calculate frequency
+        avgFreq, sigmaFreq = getFrequency(goodPeaks, goodTime)
+        
+    
+    else:
+        print('That is it')
+        avgFreq=0; sigmaFreq=0; dampCo=0; dampErr=0
+        
+    #returns the frequency and damping with errors
+    return avgFreq, sigmaFreq, dampCo, dampErr
 
 
         
@@ -569,15 +582,17 @@ def generate_data():
 
 if __name__ == "__main__":
 
-    #generate_data()
+    
+    #for i in range (3):
+     #   generate_data()
     
     with open('filenames.txt', 'r') as filenames:
-        for file in (filenames.readlines() [-1:]): #remove the -1 if I want to use all files
-            print(file)
-            goodPeaks, goodData, goodTime = plotData(file, dampingLine=True)
-            getFrequency(goodPeaks, goodTime)
+        for file in (filenames.readlines()): #remove the -1 if I want to use all files
+            #filename currently might have '\n' on end so remove this first
+            file = file.strip()
+            print(f'Current file: {file}')
+            avgFreq, sigmaFreq, dampCo, dampErr = plotData(file)
             
-
     
     
     

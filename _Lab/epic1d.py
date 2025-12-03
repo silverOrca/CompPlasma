@@ -379,8 +379,10 @@ def getFrequency(goodPeaks, goodTime):
 
 
     avgPeriod = sum(periods) / len(periods)
-    #in radians because of time normalisation
-    avgFreq = 1 / avgPeriod
+    #dimensionless frequency because of time normalisation so multiply by 2pi
+    #gives normalised angular frequency
+    avgFreq = (1 / avgPeriod) *2 * pi
+    
     
     #calculate the variance for the s.d. of the mean for uncertainty
     variance=0.
@@ -394,7 +396,7 @@ def getFrequency(goodPeaks, goodTime):
     sigmaFreq = sigmaPeriod / avgPeriod**2
 
 
-    print(f"Frequency (radians): {avgFreq} +/- {sigmaFreq}")
+    print(f"Angular frequency (normalised to omega_p): {avgFreq:.2f} +/- {sigmaFreq:.2f}")
     
     
 #plot a line across the good peaks to get damping
@@ -422,7 +424,7 @@ def getDamping(goodTime, goodData):
     #get error in damping
     errors = np.sqrt(np.diag(pcov))
     dampingError = errors[1]
-    print(f"The damping coefficient is: {popt[1]} +/- {dampingError}")
+    print(f"The damping coefficient is: {popt[1]:.2f} +/- {dampingError:.2f}")
     
     return x_fitting, y_fitted
 
@@ -478,13 +480,17 @@ def plotData(filename, dampingLine=True):
         #plot the useful data in a green dashed line
         plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
         plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
+        #label each peak with coordinates
+        for i in range(len(goodTimeValues)):
+            txt = f'  ({goodTimeValues[i]:.2f}, {goodPeakValues[i]:.2f})'
+            plt.annotate(txt, (goodTimeValues[i], goodPeakValues[i]), color='blue', size=7)
         
         plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
         plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
         plt.yscale('log')
         
         plt.title('Figure 11: Plot of normalised first harmonic amplitude against normalised time,\n for an electric field wave propogating through a plasma.')
-        plt.legend(loc='best')
+        plt.legend(loc='upper right')
         plt.grid(alpha=0.3)
         plt.ioff() # This so that the windows stay open - disables interactive mode
         plt.show()

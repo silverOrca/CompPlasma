@@ -159,7 +159,7 @@ def pic(f, ncells, L):
     # Put back into a single array
     return concatenate( (vel, accel) )
 
-####################################################################
+###############################################################################
 
 def run(pos, vel, L, ncells=None, out=[], output_times=linspace(0,20,100), cfl=0.5):
     
@@ -195,7 +195,7 @@ def run(pos, vel, L, ncells=None, out=[], output_times=linspace(0,20,100), cfl=0
         
     return pos, vel
 
-####################################################################
+###############################################################################
 # 
 # Output functions and classes
 #
@@ -265,7 +265,7 @@ class Summary:
         self.t.append(t)
         self.firstharmonic.append(fh)
 
-####################################################################
+###############################################################################
 # 
 # Functions to create the initial conditions
 #
@@ -300,7 +300,7 @@ def twostream(npart, L, vbeam=2):
     return pos,vel
 
 
-####################################################################
+###############################################################################
 #My own functions
 
 def separateNoise(peaks, noisePeak, amplitudes, times):
@@ -376,7 +376,7 @@ def getFrequency(goodPeaks, goodTime):
     #don't calculate for first peak because there isn't a peak before it
     for i, peak in enumerate(goodPeaks[1:]):
         prevPeak = goodPeaks[i]
-        periods.append(goodTime[peak] - goodTime[prevPeak])
+        periods.append((goodTime[peak] - goodTime[prevPeak]) * 2)
 
 
     avgPeriod = sum(periods) / len(periods)
@@ -411,7 +411,6 @@ def getDamping(goodTime, goodData, amplitudes):
     a0guess = amplitudes[0]
     dguess = 0.1
     
-
     p0=[a0guess, dguess]
     popt, pcov = curve_fit(dampingEq, goodTime, goodData, p0)
     
@@ -585,45 +584,103 @@ def generate_data():
     
     return filename
     
+#if runs = 0 then it doesn't generate data, only loads it up
+#if runs less than 0 doesn't generate data (can't have negative runs)
+def main(runs):
     
+    #to save values and find average
+    frequencies = []
+    freqError = []
+    dampingCo = []
+    dampingError = []
+    
+    
+    if runs > 0:
+        #here need to empty file so only the newly generated filenames are stored
+        with open('filenames.txt', 'r+') as filenames:
+            filenames.seek(0)
+            filenames.truncate()
+        for i in range(runs):
+            avgFreq=0; sigmaFreq=0; dampCo=0; dampErr = 0
+            #to know if it is repeating on a particular value of i, to delete prev data
+            #set to true if on a repeated i
+            repeated = False
+            while (avgFreq == 0) and (sigmaFreq==0) and (dampCo==0) and (dampErr == 0):
+                #first delete previous line in file and the data file
+                #this is to keep data volume manageable
+                if repeated:
+                    with open('filenames.txt', 'r+') as filenames:
+                        lines = filenames.readlines()
+                        #deletes the data file with the same name as last filename in txt file
+                        os.remove(lines[-1])
+                        #rewrites the entire file except with the last line
+                        filenames.writelines(lines[:-1])
+
+                #now if the values are 0 it will delete that data file and its name in filenames.txt
+                repeated = True
+            
+                filename = generate_data()
+                
+                avgFreq, sigmaFreq, dampCo, dampErr = plotData(filename)
+            
+            #append to lists outside of while loop so the values aren't 0
+            frequencies.append(avgFreq)
+            freqError.append(sigmaFreq)
+            dampingCo.append(dampCo)
+            dampingError.append(dampErr)
+    else:
+        with open('filenames.txt', 'r') as filenames:
+            for file in (filenames.readlines()): #remove the -1 if I want to use all files
+                #filename currently might have '\n' on end so remove this first
+                file = file.strip()
+                print(f'Current file: {file}')
+                avgFreq, sigmaFreq, dampCo, dampErr = plotData(file)
+                
+                frequencies.append(avgFreq)
+                freqError.append(sigmaFreq)
+                dampingCo.append(dampCo)
+                dampingError.append(dampErr)
+                
+                
+    #compute the weighted average of the values with errors
+    freqWeightings = []
+    dampWeightings=[]
+    for i in range (len(freqError)):
+        freqWeightings.append(1/(freqError[i]**2))
+        dampWeightings.append(1/(dampingError[i]**2))
+        
+    totalFreq=0.
+    totalDamp=0.
+    for i in range(len(frequencies)):
+        totalFreq += (frequencies[i]*freqWeightings[i])
+        totalDamp += (dampingCo[i]*dampWeightings[i])
+    avgTotalFreq = totalFreq / sum(freqWeightings)
+    avgTotalDamp = totalDamp / sum(dampWeightings)
+    
+    
+    #calculate the variance for the s.d. of the mean for uncertainty
+    varianceFreq=0.
+    varianceDamp=0.
+    for f, d in zip(frequencies, dampingCo):
+        varianceFreq += (f-avgTotalFreq)**2
+        varianceDamp += (d-avgTotalDamp)**2
+
+    #s.d. equation
+    uncMeanFreq = sqrt(varianceFreq/(len(frequencies)-1))
+    uncMeanDamp = sqrt(varianceDamp/(len(dampingCo)-1))
+    
+    print(f'Mean frequency: {avgTotalFreq} +/- {uncMeanFreq}')
+    print(f'Mean damping coefficient: {avgTotalDamp} +/- {uncMeanDamp}')
+
+        
     
 
 ####################################################################
 
 if __name__ == "__main__":
 
-    
-    #for i in range (3):
-     #   generate_data()
-    
-    # with open('filenames.txt', 'r') as filenames:
-    #     for file in (filenames.readlines()): #remove the -1 if I want to use all files
-    #         #filename currently might have '\n' on end so remove this first
-    #         file = file.strip()
-    #         print(f'Current file: {file}')
-    #         avgFreq, sigmaFreq, dampCo, dampErr = plotData(file)
             
-
-    for i in range(5):
-        avgFreq=0; sigmaFreq=0; dampCo=0; dampErr = 0
-        #to know if it is repeating on a particular value of i, to delete prev data
-        #set to true if on a repeated i
-        repeated = False
-        while (avgFreq == 0) and (sigmaFreq==0) and (dampCo==0) and (dampErr == 0):
-            #first delete previous line in file and the data file
-            #this is to keep data volume manageable
-            if repeated:
-                with open('filenames.txt', 'r+') as filenames:
-                    lines = filenames.readlines()
-                    os.remove(lines[-1])
-                    filenames.writelines(lines[:-1])
-
-            #now if the values are 0 it will delete that data file and its name in filenames.txt
-            repeated = True
-        
-            filename = generate_data()
-            
-            avgFreq, sigmaFreq, dampCo, dampErr = plotData(filename)
+    main(0)
             
             
     

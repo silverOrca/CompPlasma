@@ -328,19 +328,12 @@ def separateNoise(peaks, noisePeak, amplitudes, times):
     indexMin = indexMin[0][0]
     goodPeaks = peaks[0:indexMin]
     
-    #iterate over noisy peaks to take rms for finding noise amplitude level
-    totalNoiseSquared = 0.
-    for peak in peaks:
-        totalNoiseSquared += (amplitudes[peak])**2
-    averageNoise = totalNoiseSquared/len(peaks)
-    rms = sqrt(averageNoise)
-    #print(f'Noise amplitude: {rms}')
     
     return noiseData, goodData, noiseTime, goodTime, goodPeaks
 
 
 
-def locateNoise(peak_values, peaks):
+def locateNoise(peak_values, peaks, amplitudes):
 
     #iterates over peaks to find the first one that is greater than the last one
     for i in range(len(peak_values)):
@@ -351,7 +344,16 @@ def locateNoise(peak_values, peaks):
                 noisePeak = peaks[i]
                 break
 
-    return noisePeakValue, noisePeak
+    #iterate over noisy peaks to take rms for finding noise amplitude level
+    totalNoiseSquared = 0.
+    for peak in peaks:
+        totalNoiseSquared += (amplitudes[peak])**2
+    averageNoise = totalNoiseSquared/len(peaks)
+    rms = sqrt(averageNoise)
+    print(f'Noise amplitude: {rms}')
+
+
+    return noisePeakValue, noisePeak, rms
 
 
 #finds each peak in the first harmonic data
@@ -457,11 +459,12 @@ def plotData(filename):
         
         
         #next, find where the next peak is greater than last peak
-        noisePeakValue, noisePeak = locateNoise(peak_values, peaks)
+        noisePeakValue, noisePeak, noiseAmplitude = locateNoise(peak_values, peaks, amplitudes)
 
         #now separate the two sides of the data
         #should separate the whole peak, so find the minima point before the noise peak
         noiseData, goodData, noiseTime, goodTime, goodPeaks = separateNoise(peaks, noisePeak, amplitudes, times)
+        
         
         goodPeakValues = goodData[goodPeaks]
         goodTimeValues = goodTime[goodPeaks]
@@ -515,7 +518,7 @@ def plotData(filename):
         avgFreq=0; sigmaFreq=0; dampCo=0; dampErr=0
         
     #returns the frequency and damping with errors
-    return avgFreq, sigmaFreq, dampCo, dampErr
+    return avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude
 
 
         
@@ -547,20 +550,20 @@ def saveData(L, ncells, npart, s):
       
         
 #gets the position and velocity data (amplitude)
-def generate_data():
+def generate_data(npart=1000, LMultiple=4., ncells=20):
     # Generate initial condition
     # 
     t1=time.time()
-    npart = 1000   
+     
     if False:
         # 2-stream instability
         L = 100
-        ncells = 20
+        #ncells = 20
         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
     else:
         # Landau damping
-        L = 4.*pi
-        ncells = 20
+        L = LMultiple*pi
+        #ncells = 20
         pos, vel = landau(npart, L)
     
     # Create some output classes
@@ -579,20 +582,63 @@ def generate_data():
     
     
     t2=time.time()
+    timeTaken = t2-t1
     
-    print('Time taken: '+str(t2-t1))
+    print(f'Time taken: {timeTaken}s')
     
-    return filename
+    return filename, timeTaken
+
+
+#calculates the average values for multiple sets of generated data
+def meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes):
+    #compute the weighted average of the values with errors
+    freqWeightings = []
+    dampWeightings=[]
+    for i in range (len(freqError)):
+        freqWeightings.append(1/(freqError[i]**2))
+        dampWeightings.append(1/(dampingError[i]**2))
+        
+    totalFreq=0.
+    totalDamp=0.
+    for i in range(len(frequencies)):
+        totalFreq += (frequencies[i]*freqWeightings[i])
+        totalDamp += (dampingCo[i]*dampWeightings[i])
+    avgTotalFreq = totalFreq / sum(freqWeightings)
+    avgTotalDamp = totalDamp / sum(dampWeightings)
     
+    totalNoise = sum(noiseAmplitudes)
+    avgNoise = totalNoise / len(noiseAmplitudes)
+    
+    #calculate the variance for the s.d. of the mean for uncertainty
+    varianceFreq=0.
+    varianceDamp=0.
+    varianceNoise=0.
+    for f, d, n in zip(frequencies, dampingCo, noiseAmplitudes):
+        varianceFreq += (f-avgTotalFreq)**2
+        varianceDamp += (d-avgTotalDamp)**2
+        varianceNoise += (n-avgNoise)**2
+
+    #s.d. equation
+    uncMeanFreq = sqrt(varianceFreq/(len(frequencies)-1))
+    uncMeanDamp = sqrt(varianceDamp/(len(dampingCo)-1))
+    uncMeanNoise = sqrt(varianceNoise/(len(noiseAmplitudes)-1))
+    
+    print(f'Mean frequency: {avgTotalFreq} +/- {uncMeanFreq}')
+    print(f'Mean damping coefficient: {avgTotalDamp} +/- {uncMeanDamp}')
+    print(f'Mean noise amplitude: {avgNoise} +/- {uncMeanNoise}')
+
+
+
 #if runs = 0 then it doesn't generate data, only loads it up
 #if runs less than 0 doesn't generate data (can't have negative runs)
-def main(runs):
+def main(runs, npart, LMultiple, ncells):
     
     #to save values and find average
     frequencies = []
     freqError = []
     dampingCo = []
     dampingError = []
+    noiseAmplitudes = []
     
     
     if runs > 0:
@@ -600,6 +646,10 @@ def main(runs):
         with open('filenames.txt', 'r+') as filenames:
             filenames.seek(0)
             filenames.truncate()
+        
+        #to sum up time taken for repeat runs
+        totalTime = 0.
+        
         for i in range(runs):
             avgFreq=0; sigmaFreq=0; dampCo=0; dampErr = 0
             #to know if it is repeating on a particular value of i, to delete prev data
@@ -619,68 +669,50 @@ def main(runs):
                 #now if the values are 0 it will delete that data file and its name in filenames.txt
                 repeated = True
             
-                filename = generate_data()
+                filename, timeTaken = generate_data(npart=npart, LMultiple=LMultiple, ncells=ncells)
                 
-                avgFreq, sigmaFreq, dampCo, dampErr = plotData(filename)
+                avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(filename)
             
             #append to lists outside of while loop so the values aren't 0
             frequencies.append(avgFreq)
             freqError.append(sigmaFreq)
             dampingCo.append(dampCo)
             dampingError.append(dampErr)
+            noiseAmplitudes.append(noiseAmplitude)
+            totalTime += timeTaken
+        
+        print(f'Total time taken: {totalTime}s')
+        
     else:
         with open('filenames.txt', 'r') as filenames:
             for file in (filenames.readlines()): #remove the -1 if I want to use all files
                 #filename currently might have '\n' on end so remove this first
                 file = file.strip()
                 print(f'Current file: {file}')
-                avgFreq, sigmaFreq, dampCo, dampErr = plotData(file)
+                avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(file)
                 
                 frequencies.append(avgFreq)
                 freqError.append(sigmaFreq)
                 dampingCo.append(dampCo)
                 dampingError.append(dampErr)
+                noiseAmplitudes.append(noiseAmplitude)
                 
                 
-    #compute the weighted average of the values with errors
-    freqWeightings = []
-    dampWeightings=[]
-    for i in range (len(freqError)):
-        freqWeightings.append(1/(freqError[i]**2))
-        dampWeightings.append(1/(dampingError[i]**2))
-        
-    totalFreq=0.
-    totalDamp=0.
-    for i in range(len(frequencies)):
-        totalFreq += (frequencies[i]*freqWeightings[i])
-        totalDamp += (dampingCo[i]*dampWeightings[i])
-    avgTotalFreq = totalFreq / sum(freqWeightings)
-    avgTotalDamp = totalDamp / sum(dampWeightings)
-    
-    
-    #calculate the variance for the s.d. of the mean for uncertainty
-    varianceFreq=0.
-    varianceDamp=0.
-    for f, d in zip(frequencies, dampingCo):
-        varianceFreq += (f-avgTotalFreq)**2
-        varianceDamp += (d-avgTotalDamp)**2
+    meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
 
-    #s.d. equation
-    uncMeanFreq = sqrt(varianceFreq/(len(frequencies)-1))
-    uncMeanDamp = sqrt(varianceDamp/(len(dampingCo)-1))
-    
-    print(f'Mean frequency: {avgTotalFreq} +/- {uncMeanFreq}')
-    print(f'Mean damping coefficient: {avgTotalDamp} +/- {uncMeanDamp}')
-
-        
     
 
 ####################################################################
 
 if __name__ == "__main__":
 
-            
-    main(0)
+    #pass in: runs, npart, LMultiple, ncells
+    #runs is how many repeats do we want to do
+    #npart is number of particles
+    #LMultiple is which multiple of pi do we want the box size (not for 2 stream instability, otherwise doesn't matter)
+    #ncells is number of cells for PIC simulation
+    
+    main(5, 1000, 4, 20)
             
             
     

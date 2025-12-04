@@ -398,7 +398,7 @@ def getFrequency(goodPeaks, goodTime):
     #convert to frequency error  
     sigmaFreq = sigmaPeriod / avgPeriod**2
 
-    print(f"Angular frequency (normalised to omega_p): {avgFreq:.2f} +/- {sigmaFreq:.2f}")
+    print(f"Angular frequency (normalised to omega_p): {avgFreq} +/- {sigmaFreq}")
     
     return avgFreq, sigmaFreq
     
@@ -429,7 +429,7 @@ def getDamping(goodTime, goodData, amplitudes):
     #get error in damping
     errors = np.sqrt(np.diag(pcov))
     dampingError = errors[1]
-    print(f"The damping coefficient is: {popt[1]:.2f} +/- {dampingError:.2f}")
+    print(f"The damping coefficient is: {popt[1]} +/- {dampingError}")
     
     return x_fitting, y_fitted, popt[1], dampingError
 
@@ -494,7 +494,7 @@ def plotData(filename):
             plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
             #label each peak with coordinates
             for i in range(len(goodTimeValues)):
-                txt = f'  ({goodTimeValues[i]:.2f}, {goodPeakValues[i]:.2f})'
+                txt = f'  ({goodTimeValues[i]}, {goodPeakValues[i]})'
                 plt.annotate(txt, (goodTimeValues[i], goodPeakValues[i]), color='blue', size=7)
             
             plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
@@ -591,42 +591,60 @@ def generate_data(npart=1000, LMultiple=4., ncells=20):
 
 #calculates the average values for multiple sets of generated data
 def meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes):
-    #compute the weighted average of the values with errors
-    freqWeightings = []
-    dampWeightings=[]
-    for i in range (len(freqError)):
-        freqWeightings.append(1/(freqError[i]**2))
-        dampWeightings.append(1/(dampingError[i]**2))
+    
+    if len(frequencies) > 1:
+        #compute the weighted average of the values with errors
+        freqWeightings = []
+        dampWeightings=[]
+        for i in range (len(freqError)):
+            if freqError[i] != 0:
+                freqWeightings.append(1/(freqError[i]**2))
+            else:
+                freqWeightings.append(100)
+            if dampingError[i] != 0:
+                dampWeightings.append(1/(dampingError[i]**2))
+            else:
+                dampWeightings.append(100)
+            
+        totalFreq=0.
+        totalDamp=0.
+        for i in range(len(frequencies)):
+            totalFreq += (frequencies[i]*freqWeightings[i])
+            totalDamp += (dampingCo[i]*dampWeightings[i])
+        avgTotalFreq = totalFreq / sum(freqWeightings)
+        avgTotalDamp = totalDamp / sum(dampWeightings)
         
-    totalFreq=0.
-    totalDamp=0.
-    for i in range(len(frequencies)):
-        totalFreq += (frequencies[i]*freqWeightings[i])
-        totalDamp += (dampingCo[i]*dampWeightings[i])
-    avgTotalFreq = totalFreq / sum(freqWeightings)
-    avgTotalDamp = totalDamp / sum(dampWeightings)
+        totalNoise = sum(noiseAmplitudes)
+        avgNoise = totalNoise / len(noiseAmplitudes)
+        
+        #calculate the variance for the s.d. of the mean for uncertainty
+        varianceFreq=0.
+        varianceDamp=0.
+        varianceNoise=0.
+        for f, d, n in zip(frequencies, dampingCo, noiseAmplitudes):
+            varianceFreq += (f-avgTotalFreq)**2
+            varianceDamp += (d-avgTotalDamp)**2
+            varianceNoise += (n-avgNoise)**2
     
-    totalNoise = sum(noiseAmplitudes)
-    avgNoise = totalNoise / len(noiseAmplitudes)
-    
-    #calculate the variance for the s.d. of the mean for uncertainty
-    varianceFreq=0.
-    varianceDamp=0.
-    varianceNoise=0.
-    for f, d, n in zip(frequencies, dampingCo, noiseAmplitudes):
-        varianceFreq += (f-avgTotalFreq)**2
-        varianceDamp += (d-avgTotalDamp)**2
-        varianceNoise += (n-avgNoise)**2
+        #s.d. equation
+        uncMeanFreq = sqrt(varianceFreq/(len(frequencies)-1))
+        uncMeanDamp = sqrt(varianceDamp/(len(dampingCo)-1))
+        uncMeanNoise = sqrt(varianceNoise/(len(noiseAmplitudes)-1))
+        
+        print(f'Mean frequency: {avgTotalFreq} +/- {uncMeanFreq}')
+        print(f'Mean damping coefficient: {avgTotalDamp} +/- {uncMeanDamp}')
+        print(f'Mean noise amplitude: {avgNoise} +/- {uncMeanNoise}')
+        
+    else:
+        avgTotalFreq = frequencies[0]
+        avgTotalDamp = dampingCo[0]
+        avgNoise = noiseAmplitudes[0]
+        
+        uncMeanFreq = freqError
+        uncMeanDamp = dampingError
+        uncMeanNoise = [0.]
 
-    #s.d. equation
-    uncMeanFreq = sqrt(varianceFreq/(len(frequencies)-1))
-    uncMeanDamp = sqrt(varianceDamp/(len(dampingCo)-1))
-    uncMeanNoise = sqrt(varianceNoise/(len(noiseAmplitudes)-1))
-    
-    print(f'Mean frequency: {avgTotalFreq} +/- {uncMeanFreq}')
-    print(f'Mean damping coefficient: {avgTotalDamp} +/- {uncMeanDamp}')
-    print(f'Mean noise amplitude: {avgNoise} +/- {uncMeanNoise}')
-
+    return avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise
 
 
 #if runs = 0 then it doesn't generate data, only loads it up
@@ -663,8 +681,11 @@ def main(runs, npart, LMultiple, ncells):
                         lines = filenames.readlines()
                         #deletes the data file with the same name as last filename in txt file
                         os.remove(lines[-1])
+                        
+                        for line in lines[:-1]:
                         #rewrites the entire file except with the last line
-                        filenames.writelines(lines[:-1])
+                            line = line.strip()
+                            filenames.writelines(line)
 
                 #now if the values are 0 it will delete that data file and its name in filenames.txt
                 repeated = True
@@ -672,6 +693,8 @@ def main(runs, npart, LMultiple, ncells):
                 filename, timeTaken = generate_data(npart=npart, LMultiple=LMultiple, ncells=ncells)
                 
                 avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(filename)
+                
+                totalTime += timeTaken
             
             #append to lists outside of while loop so the values aren't 0
             frequencies.append(avgFreq)
@@ -679,7 +702,7 @@ def main(runs, npart, LMultiple, ncells):
             dampingCo.append(dampCo)
             dampingError.append(dampErr)
             noiseAmplitudes.append(noiseAmplitude)
-            totalTime += timeTaken
+            
         
         print(f'Total time taken: {totalTime}s')
         
@@ -698,9 +721,31 @@ def main(runs, npart, LMultiple, ncells):
                 noiseAmplitudes.append(noiseAmplitude)
                 
                 
-    meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
-
+    avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
     
+    return avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise
+    
+
+def plotVariation(ncells, avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise):
+    
+    print(ncells)
+    print(avgTotalFreq)
+    plt.errorbar(ncells, avgTotalFreq, yerr=uncMeanFreq)
+    plt.xlabel('Number of cells')
+    plt.ylabel('Average Frequency')
+    plt.show()
+    
+    plt.errorbar(ncells, avgTotalDamp, yerr=uncMeanDamp)
+    plt.xlabel('Number of cells')
+    plt.ylabel('Average Damping')
+    plt.show()
+    
+    plt.errorbar(ncells, avgNoise, yerr=uncMeanNoise)
+    plt.xlabel('Number of cells')
+    plt.ylabel('Average Noise')
+    plt.show()
+
+
 
 ####################################################################
 
@@ -712,8 +757,40 @@ if __name__ == "__main__":
     #LMultiple is which multiple of pi do we want the box size (not for 2 stream instability, otherwise doesn't matter)
     #ncells is number of cells for PIC simulation
     
-    main(5, 1000, 4, 20)
-            
+    avgTotalFreqValues = [] 
+    uncMeanFreqValues = [] 
+    avgTotalDampValues = [] 
+    uncMeanDampValues = [] 
+    avgNoiseValues = [] 
+    uncMeanNoiseValues = []
+    
+    ncells = [20, 40, 60, 80, 100]
+    
+    for i in range(len(ncells)):
+        avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = main(1, 1000, 4, ncells[i])
+        avgTotalFreqValues.append(avgTotalFreq)
+        uncMeanFreqValues.append(uncMeanFreq[0]) 
+        avgTotalDampValues.append(avgTotalDamp) 
+        uncMeanDampValues.append(uncMeanDamp[0])
+        avgNoiseValues.append(avgNoise)
+        uncMeanNoiseValues.append(uncMeanNoise[0])
+      
+    #is 0 if there were no repeats, so need to find s.d. between values
+    if sum(uncMeanNoiseValues) == 0:
+        avgNoise = sum(avgNoiseValues) / len(avgNoiseValues)
+        varianceNoise=0.
+        for n in avgNoiseValues:
+            varianceNoise += (n-avgNoise)**2
+    
+        #s.d. equation
+        uncMeanNoise = sqrt(varianceNoise/(len(avgNoiseValues)-1))
+        
+        for i in range(len(uncMeanNoiseValues)):
+            uncMeanNoiseValues[i] = uncMeanNoise
+        
+    
+    #call function to plot all values against the number of cells
+    plotVariation(ncells, avgTotalFreqValues, uncMeanFreqValues, avgTotalDampValues, uncMeanDampValues, avgNoiseValues, uncMeanNoiseValues)
             
     
     

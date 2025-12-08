@@ -14,8 +14,9 @@ Portfolio 2
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import spsolve
 
-from numpy import zeros, linspace
+from numpy import linspace
 import numpy as np
+from numpy.linalg import det
 
 import matplotlib.pyplot as plt
 
@@ -33,43 +34,66 @@ xval = linspace(0, L_x, num=nx)
 #Each spacing between the x values is the same, so just using first 2
 dx = xval[1]-xval[0]
 
-d = 0.2
+D = 0.2     #diffusion coefficient
 
-v = [0.2, -0.2]
-r = [0, -0.1, -0.2]
+v = [0.2, -0.2]     #advection flow
 
-s = 100 * (1 - np.tanh(-5*(xval - 0.75)))
+S = 100 * (1 - np.tanh(-5*(xval - 0.75)))       #net source
 
+R = [0, -0.1, -0.2]     #reaction coefficient
 
-#steady state transport equation
-
-
+#rhs vector, equal to what the 2nd order difference equals
+rho = -S
 
 #returns a sparse matrix of the input x grid
-#also given diffusion coefficient, D, and advection speed, v
+#also given advection speed v and reaction coefficient R
 #has neumann lower boundary and dirichlet upper boundary
-
-def return_sparse_matrix(aVal):
+def return_sparse_matrix(aVal, v, R):
     #create the empty sparse matrix
     M = lil_matrix((nx, nx))
+    
+    #set the values in middle of matrix (2nd order diff)
+    for i in range(1, nx-1):
+        # sets previous value (A)
+        M[i, i-1] = (D/dx**2) - ((0.5*v)/dx)
+        # Sets current value (B)
+        M[i, i]   =  -(2.0*D)/dx**2 + R
+        # Sets following value (C)
+        M[i, i+1] = (D/dx**2) + ((0.5*v)/dx)
+    
     
     #set boundaries
     #lower boundaries - 2nd order neumann
     M[0,0] = -1.5/dx
     M[0,1] = 2/dx
-    M[0,3] = -0.5/dx
+    M[0,2] = -0.5/dx
+    rho[0] = aVal
     
-    #upper boundary - dirichlet
-    M[-1,-1] = aVal
+    
+    #upper boundary - dirichlet (zero-Dirichlet means M= 1)
+    M[-1,-1] = 1.0
+    rho[-1] = aVal
     
     return M
 
 
+for value in v:
+    for co in R:
 
-M = return_sparse_matrix(aVal=0.0)
-
-#change the format of M from lil to CSR so spsolve can work
-M = M.tocsr()
+        M = return_sparse_matrix(aVal=0.0, v=value, R=co)
     
+        #change the format of M from lil to CSR so spsolve can work
+        M = M.tocsr()
+         
+        solution = spsolve(M, rho)
+        
+        #rhocheck = M.dot(solution)
+        
+        #Print the error - use abs for full value and find difference between check (calculated) value and defined value
+        #print('Max absolute error is {num}'.format(num=abs(rhocheck[1:-1]-rho[1:-1]).max()))
+        
+        #Plot the solution
+        plt.plot(xval, solution, '-')
     
-    
+#plt.xlabel(r'$x$') ; plt.ylabel(r'$\$')
+    plt.show()

@@ -343,6 +343,8 @@ def locateNoise(peak_values, peaks, amplitudes):
                 noisePeakValue = peak_values[i]
                 noisePeak = peaks[i]
                 break
+        else:
+            noisePeakValue = 0
 
     #iterate over noisy peaks to take rms for finding noise amplitude level
     totalNoiseSquared = 0.
@@ -767,13 +769,13 @@ if __name__ == "__main__":
     ncells = [20, 40, 60, 80, 100]
     
     for i in range(len(ncells)):
-        avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = main(1, 1000, 4, ncells[i])
+        avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = main(2, 1000, 4, ncells[i])
         avgTotalFreqValues.append(avgTotalFreq)
-        uncMeanFreqValues.append(uncMeanFreq[0]) 
+        uncMeanFreqValues.append(uncMeanFreq)  # put [0] if 1 run
         avgTotalDampValues.append(avgTotalDamp) 
-        uncMeanDampValues.append(uncMeanDamp[0])
+        uncMeanDampValues.append(uncMeanDamp) # put [0] if 1 run
         avgNoiseValues.append(avgNoise)
-        uncMeanNoiseValues.append(uncMeanNoise[0])
+        uncMeanNoiseValues.append(uncMeanNoise) # put [0] if 1 run
       
     #is 0 if there were no repeats, so need to find s.d. between values
     if sum(uncMeanNoiseValues) == 0:

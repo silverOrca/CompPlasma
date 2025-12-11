@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Thu Dec 11 12:02:47 2025
+
+@author: ciara
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Tue Dec  9 11:26:12 2025
 
 @author: ciara
@@ -11,7 +18,6 @@ Created on Tue Dec  9 11:26:12 2025
 from genericpath import isfile
 import os
 import time
-import csv
 from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
 import numpy as np
@@ -439,8 +445,8 @@ def getDamping(goodTime, goodData, amplitudes):
     
     return x_fitting, y_fitted, popt[1], dampingError
 
-#main flow of solving for values (noise, frequency, damping) and plotting the data
-def plotData(filename, landau=True):
+#main flow of solving for values and plotting the data
+def plotData(filename):
     #load in data from file and plot it
     file=False
     times = []
@@ -460,10 +466,6 @@ def plotData(filename, landau=True):
     if file:
         times=np.asarray(times)
         amplitudes=np.asarray(amplitudes)
-        plt.plot(times, amplitudes)
-        plt.title(filename)
-        plt.show()
-        
         #first, find the peaks (peaks variable is indices of peaks)
         peak_values, time_values, peaks = findPeaks(amplitudes, times)
         
@@ -524,82 +526,63 @@ def plotData(filename, landau=True):
 
 
         
-def saveData(L, ncells, npart, s, landau):
+def saveData(L, ncells, npart, s):
     #save code in a file
     #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
     #for which run of the code, make it so if a file exists with the other variables the same, it saves it with a number on end (e.g. 2 for 2nd go)
     #L, ncells, npart
-    if landau == True:
-        filename = 'L'+str(L)+'_ncells'+str(ncells)+' npart'+str(npart)+'run'
-    else:
-        filename = 'TwoStream_L'+str(L)+'_ncells'+str(ncells)+' npart'+str(npart)+'run'
+    filename = 'L'+str(L)+'_ncells'+str(ncells)+' npart'+str(npart)+'run'
+    path = "C:\\Users\\zks524\\compPlasma-repo\\_Lab\\"+filename+".txt"
+    if os.path.isfile(filename):
+        #get number on end of filename
+        run_number = 2
+        while isfile(filename+str(run_number)):
+            run_number += 1
+        filename = filename + str(run_number)
         
-        path = "C:\\Users\\zks524\\compPlasma-repo\\_Lab\\"+filename+".txt"
-        if os.path.isfile(filename):
-            #get number on end of filename
-            run_number = 2
-            while isfile(filename+str(run_number)):
-                run_number += 1
-            filename = filename + str(run_number)
+        
+    with open(filename, "w") as f:
+        for times, amplitudes in zip(s.t, s.firstharmonic):
+            f.write(f"{times}\t{amplitudes}\n")
             
             
-        with open(filename, "w") as f:
-            for times, amplitudes in zip(s.t, s.firstharmonic):
-                f.write(f"{times}\t{amplitudes}\n")
-                
-                
-        #add latest filename to file of all filenames     
-        with open('filenames.txt', 'a') as filenames:
-            filenames.write(str(filename)+'\n')
+    #add latest filename to file of all filenames     
+    with open('filenames.txt', 'a') as filenames:
+        filenames.write(str(filename)+'\n')
         
     return filename
       
         
 #gets the position and velocity data (amplitude)
-def generate_data(npart=1000, LMultiple=4., ncells=20, landau=True):
+def generate_data(npart=1000, LMultiple=4., ncells=20):
     # Generate initial condition
     # 
     t1=time.time()
      
-    if landau == False:
+    if False:
         # 2-stream instability
-        #L = 100
+        L = 100
         #ncells = 20
-        #npart = 10000
-        L=LMultiple
         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-        # Create some output classes
-        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-        s = Summary()                 # Calculates, stores and prints summary info
-        # Summary stores an array of the first-harmonic amplitude
-
-        diagnostics_to_run = [p, s]   # Remove p to get much faster code! (the plotting)
-        
-        # Run the simulation
-        pos, vel = run(pos, vel, L, ncells, 
-                       out = diagnostics_to_run,        # These are called each output step
-                       output_times=linspace(0.,80,200)) # The times to output
-        
-        filename = saveData(L, ncells, npart, s, landau=landau)
     else:
         # Landau damping
         L = LMultiple*pi
         #ncells = 20
         pos, vel = landau(npart, L)
     
-        # Create some output classes
-        #p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-        s = Summary()                 # Calculates, stores and prints summary info
-        # Summary stores an array of the first-harmonic amplitude
+    # Create some output classes
+    #p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+    s = Summary()                 # Calculates, stores and prints summary info
+    # Summary stores an array of the first-harmonic amplitude
+
+    diagnostics_to_run = [s]   # Remove p to get much faster code! (the plotting)
     
-        diagnostics_to_run = [s]   # Remove p to get much faster code! (the plotting)
-        
-        # Run the simulation
-        pos, vel = run(pos, vel, L, ncells, 
-                       out = diagnostics_to_run,        # These are called each output step
-                       output_times=linspace(0.,20,50)) # The times to output
-        
-        filename = saveData(L, ncells, npart, s, landau=landau)
+    # Run the simulation
+    pos, vel = run(pos, vel, L, ncells, 
+                   out = diagnostics_to_run,        # These are called each output step
+                   output_times=linspace(0.,20,50)) # The times to output
+    
+    filename = saveData(L, ncells, npart, s)
     
     
     t2=time.time()
@@ -668,54 +651,50 @@ def meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes):
     return avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise
 
 
-#plots each variable calculated against the parameter we are changing
-def plotVariation(loopingVar, varName, avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise, totalTime):
-    
-    if varName == 'npart':
-        xcaption = 'Number of particles'
-        title = 'number of particles.'
-    elif varName == 'LMultiple':
-        xcaption = r'Length of box (in $\pi$)'
-        title = r'length of box (in $\pi$).'
-    elif varName == 'ncells':
-        xcaption = 'Number of cells'
-        title = 'number of cells.'
-    
+
+def plotVariation(L, avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise, totalTime):
     
     fig2, axes = plt.subplots(2, 2, figsize=(10, 8), constrained_layout=True)
     
     freqPlot = axes[0, 0]
-    freqPlot.errorbar(loopingVar, avgTotalFreq, yerr=uncMeanFreq)
-    freqPlot.set_xlabel(xcaption)
+    freqPlot.errorbar(L, avgTotalFreq, yerr=uncMeanFreq)
+    freqPlot.set_xlabel(r'Length of box (in $\pi$)')
     freqPlot.set_ylabel(r'Average Angular Frequency, normalised to $\omega_p$')
     freqPlot.grid(alpha=0.3)
     
     dampPlot = axes[0, 1]
-    dampPlot.errorbar(loopingVar, avgTotalDamp, yerr=uncMeanDamp)
-    dampPlot.set_xlabel(xcaption)
+    dampPlot.errorbar(L, avgTotalDamp, yerr=uncMeanDamp)
+    dampPlot.set_xlabel(r'Length of box (in $\pi$)')
     dampPlot.set_ylabel('Average Damping')
     dampPlot.grid(alpha=0.3)
     
     noisePlot = axes[1, 0]
-    noisePlot.errorbar(loopingVar, avgNoise, yerr=uncMeanNoise)
-    noisePlot.set_xlabel(xcaption)
+    noisePlot.errorbar(L, avgNoise, yerr=uncMeanNoise)
+    noisePlot.set_xlabel(r'Length of box (in $\pi$)')
     noisePlot.set_ylabel('Average Noise')
     noisePlot.grid(alpha=0.3)
     
     timePlot = axes[1, 1]
-    timePlot.scatter(loopingVar, totalTime)
-    timePlot.set_xlabel(xcaption)
+    timePlot.scatter(L, totalTime)
+    timePlot.set_xlabel(r'Length of box (in $\pi$)')
     timePlot.set_ylabel('Time taken to generate data, s')
     timePlot.grid(alpha=0.3)
 
-    fig2.suptitle(r'Variation of average frequency, damping, noise and time taken with '+title)
+    fig2.suptitle(r'Variation of average frequency, damping, noise and time taken with length of box (in $\pi$)')
     plt.show()
 
 
 
 #
 #if runs <= 0 then returns
-def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
+def main(runs, npart, LMultiple, ncells, generateData=True):
+    
+    #to save values and find average
+    frequencies = []
+    freqError = []
+    dampingCo = []
+    dampingError = []
+    noiseAmplitudes = []
     
     avgTotalFreqValues = [] 
     uncMeanFreqValues = [] 
@@ -733,54 +712,36 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
             filenames.truncate()
         
         #checks to see which is the variable we are changing
-        #saves the loopingVar in a file (which overwrites each time) for if not generating data
         if isinstance(npart, list):
             loopingVar = npart
-            varName = 'npart'
-            with open('changedVar.txt', 'w') as changedVarFile:
-                changedVarFile.write('npart')
         elif isinstance(LMultiple, list):
             loopingVar = LMultiple
-            varName = 'LMultiple'
-            with open('changedVar.txt', 'w') as changedVarFile:
-                changedVarFile.write('LMultiple')
         elif isinstance(ncells, list):
             loopingVar = ncells
-            varName = 'ncells'
-            with open('changedVar.txt', 'w') as changedVarFile:
-                changedVarFile.write('ncells')
         else:
-            return #loopingVar = 1. #could be any value, but with length of 1
+            loopingVar = 1. #could be any value, but with length of 1
         
-            
-        #loops as many times as there are different input parameters
         for value in loopingVar:
             #this gives the total time for the repeat runs with same parameters
             totalTime = 0.
-            #to save values and find average
-            frequencies = []
-            freqError = []
-            dampingCo = []
-            dampingError = []
-            noiseAmplitudes = []
+            
             
             if runs > 0:
                 
                 #when counter = number of runs it will stop looping
                 counter = 0
                 
-                while counter < runs:
+                while counter != runs:
 
                     try:
-                        #generate data with correct parameters
                         if loopingVar == npart:
-                            filename, timeTaken = generate_data(npart=value, LMultiple=LMultiple, ncells=ncells, landau=landau)
+                            filename, timeTaken = generate_data(npart=value, LMultiple=LMultiple, ncells=ncells)
                         elif loopingVar == LMultiple:
-                            filename, timeTaken = generate_data(npart=npart, LMultiple=value, ncells=ncells, landau=landau)
+                            filename, timeTaken = generate_data(npart=npart, LMultiple=value, ncells=ncells)
                         elif loopingVar == ncells:
-                            filename, timeTaken = generate_data(npart=npart, LMultiple=LMultiple, ncells=value, landau=landau)
+                            filename, timeTaken = generate_data(npart=npart, LMultiple=LMultiple, ncells=value)
                         
-                        filename=filename.strip() #to remove any \n
+                        filename=filename.strip()
 
                         #gets the average values for one plot
                         avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(filename)
@@ -808,7 +769,7 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
                                 filenames.write(line+'\n')
                         print('Looping again')
                 
-                
+        
                     
             #for only running code once - mainly for testing purposes   
             else:
@@ -817,7 +778,8 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
                         
                     
                     
-            print(f'Time taken to generate data: {totalTime}') 
+            print(f'Time taken to generate data: {totalTime}')   
+            
             #calculate average value for each set of runs of same parameters
             avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
            
@@ -832,42 +794,21 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
      
     #for only running code without generating data - mainly for testing purposes
     else:
-        try:
-            with open('results.csv', 'r') as csvfile:
-                reader = csv.reader(csvfile)
-                next(reader)  #skip header row
+        with open('filenames.txt', 'r') as filenames:
+            for file in (filenames.readlines(-1)): #remove the -1 if
+                #filename currently might have '\n' on end so remove this first
+                file = file.strip()
+                print(f'Current file: {file}')
+                avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(file)
                 
-                #create some empty variables for setting these values
-                loopingVar = []
-                varName = None
-                
-                for row in reader:
-                    if len(row) >= 9:  #ensure we have all columns
-                        if varName is None:
-                            varName = row[0]  #get parameter name from first row
-                        
-                        #parameter value
-                        loopingVar.append(float(row[1]))  
-                        avgTotalFreqValues.append(float(row[2]))
-                        uncMeanFreqValues.append(float(row[3]))
-                        avgTotalDampValues.append(float(row[4]))
-                        uncMeanDampValues.append(float(row[5]))
-                        avgNoiseValues.append(float(row[6]))
-                        uncMeanNoiseValues.append(float(row[7]))
-                        totalTimes.append(float(row[8]))
-                
-                print(f"Loaded results for {varName} from results.csv")
-                
-        except FileNotFoundError:
-            print("Error: results.csv not found. Run with generateData=True first.")
-            return
-        except Exception as e:
-            print(f"Error loading results: {e}")
-            
-                
-                
-            
-    
+                frequencies.append(avgFreq)
+                freqError.append(sigmaFreq)
+                dampingCo.append(dampCo)
+                dampingError.append(dampErr)
+                noiseAmplitudes.append(noiseAmplitude)
+        
+        #need to calculate the total averages from multiple plots
+        avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
     
     #is 0 if there were no repeats, so need to find s.d. between values
     if sum(uncMeanNoiseValues) == 0:
@@ -883,34 +824,9 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
             uncMeanNoiseValues[i] = uncMeanNoise
     
     #call function to plot all values against the number of cells
-    plotVariation(loopingVar, varName, avgTotalFreqValues, uncMeanFreqValues, avgTotalDampValues, uncMeanDampValues, avgNoiseValues, uncMeanNoiseValues, totalTimes)
+    plotVariation(L, avgTotalFreqValues, uncMeanFreqValues, avgTotalDampValues, uncMeanDampValues, avgNoiseValues, uncMeanNoiseValues, totalTimes)
     
-    
-
-    with open('results.csv', 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        
-        #write header row
-        writer.writerow(['Parameter Name', 'Parameter Values', 'Avg Frequency', 'Freq Error', 
-                         'Avg Damping', 'Damping Error', 'Avg Noise', 'Noise Error', 'Total Time'])
-        
-        #write data rows - one for each parameter value
-        for i in range(len(loopingVar)):
-            writer.writerow([
-                varName,  # Parameter name (e.g., 'ncells')
-                loopingVar[i],  # Parameter value (e.g., 20)
-                avgTotalFreqValues[i],
-                uncMeanFreqValues[i],
-                avgTotalDampValues[i],
-                uncMeanDampValues[i],
-                avgNoiseValues[i],
-                uncMeanNoiseValues[i],
-                totalTimes[i]
-            ])
-        
-        print(f"Results saved to results.csv")
-    
-    return
+    return #avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise, totalTime
     
 
 
@@ -926,18 +842,15 @@ if __name__ == "__main__":
     #npart is number of particles
     #LMultiple is which multiple of pi do we want the box size (not for 2 stream instability, otherwise doesn't matter)
     #ncells is number of cells for PIC simulation
-    #,  80, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300
-
-    ncells = [20, 40, 60]
-    npart = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
-    LMultiple = [2, 3, 4, 5, 6, 7, 8]
     
-    #can only have generate data = False if it is for the same input parameters as when generated data
-    #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
- #L = 100
- #ncells = 20 npart=1000, LMultiple=4., ncells=20, landau=True
- #npart = 10000
-    filename, timeTaken = generate_data(npart=10000, LMultiple=100, ncells=20, landau=False)       
-    plotData(filename, landau=False)
+
+    ncells = [20, 40, 60, 80, 100]
+    npart = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
+    L = [2, 3, 4, 5, 6, 7, 8]
+    
+    main(2, 1000, 4, ncells, generateData=True)
+
+            
+    
     
     

@@ -11,6 +11,7 @@ Created on Tue Dec  9 11:26:12 2025
 from genericpath import isfile
 import os
 import time
+#import sympy as sp
 import csv
 from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
@@ -439,6 +440,57 @@ def getDamping(goodTime, goodData, amplitudes):
     
     return x_fitting, y_fitted, popt[1], dampingError
 
+
+
+    
+
+def tanGrowthEq(x, a, b, c, d):
+    return a * np.tanh(b * (x+c)) + d
+
+def getGrowthRate(peak_values, peak_times):
+    aGuess = 0.03 # how tall it is
+    bGuess = 0.1 #how wide or stretched it is
+    cGuess = -30 #how left or right (-ve for right, +ve for left)
+    dGuess = 0.02 # y intercept of infelction
+    
+    initial_guess = [aGuess, bGuess, cGuess, dGuess]
+    params, covariance = curve_fit(tanGrowthEq, peak_times, peak_values, p0=initial_guess)
+    
+    
+    # Extract the parameters
+    a, b, c, d = params
+    
+    # Create a range of x values for the curve change value of "127" to max number or data points i didnt know how to get max size of the data sheet
+    x_fit = np.linspace(min(peak_times), max(peak_times), 137)
+    
+    # Calculate the y values for the fitted curve
+    y_fit = tanGrowthEq(x_fit, a, b, c, d)
+
+    #get errors in parameter b
+    errors = np.sqrt(np.diag(covariance)) 
+    
+    equation = f"y = {a:.2f} * tanh({b:.2f} * x + {c:.2f}) + {d:.2f}"
+    print(f'Equation of fit: {equation}')
+    print(f'Growth rate (b parameter) is: {b} +/- {errors[1]}')
+    
+    #get R^2 value for the fit
+    y_predicted = tanGrowthEq(peak_times, *params)  # Use fitted parameters
+    ss_res = np.sum(np.square(peak_values - y_predicted))
+    ss_tot = np.sum(np.square(peak_values - np.mean(peak_values)))
+    r_squared = 1 - (ss_res / ss_tot)
+    print(f"R^2 value of the fit is: {r_squared}")
+
+    
+    return x_fit, y_fit
+    
+    
+
+    
+    
+
+
+
+
 #main flow of solving for values (noise, frequency, damping) and plotting the data
 def plotData(filename, landau=True):
     #load in data from file and plot it
@@ -458,72 +510,92 @@ def plotData(filename, landau=True):
         print('Failed to find and open file.')
     
     if file:
+        #to enable array manipulation
         times=np.asarray(times)
         amplitudes=np.asarray(amplitudes)
-        plt.plot(times, amplitudes)
-        plt.title(filename)
-        plt.show()
         
         #first, find the peaks (peaks variable is indices of peaks)
         peak_values, time_values, peaks = findPeaks(amplitudes, times)
         
-        
-        #next, find where the next peak is greater than last peak
-        noisePeakValue, noisePeak, noiseAmplitude = locateNoise(peak_values, peaks, amplitudes)
-
-        #now separate the two sides of the data
-        #should separate the whole peak, so find the minima point before the noise peak
-        noiseData, goodData, noiseTime, goodTime, goodPeaks = separateNoise(peaks, noisePeak, amplitudes, times)
-        
-        
-        goodPeakValues = goodData[goodPeaks]
-        goodTimeValues = goodTime[goodPeaks]
-        
-        if len(goodPeakValues) > 2:
-            #Make a semilog plot to see exponential damping, with peaks
-            #plt.figure(figsize=(10,8))
+        if landau:
+            #next, find where the next peak is greater than last peak
+            noisePeakValue, noisePeak, noiseAmplitude = locateNoise(peak_values, peaks, amplitudes)
+    
+            #now separate the two sides of the data
+            #should separate the whole peak, so find the minima point before the noise peak
+            noiseData, goodData, noiseTime, goodTime, goodPeaks = separateNoise(peaks, noisePeak, amplitudes, times)
             
-            #calculate the damping and plot the line
-            #only passes in the peak values
-            x ,y, dampCo, dampErr = getDamping(goodTimeValues, goodPeakValues, amplitudes)
-            #plt.plot(x, y, label='fit')
+            
+            goodPeakValues = goodData[goodPeaks]
+            goodTimeValues = goodTime[goodPeaks]
+            
+        
+            if len(goodPeakValues) > 2:
+                #Make a semilog plot to see exponential damping, with peaks
+                #plt.figure(figsize=(10,8))
                 
-            
-            #plot the raw data
-            #plt.plot(times, amplitudes, color='black', label='Raw values')
-            #plot x's where the peaks are
-            #plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
-            #plot the noise-dominated data in a red dashed line
-            #plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
-            
-            #plot the useful data in a green dashed line
-            #plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
-            #plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
-            #label each peak with coordinates
-            #for i in range(len(goodTimeValues)):
-            #    txt = f'  ({goodTimeValues[i]}, {goodPeakValues[i]})'
-            #    plt.annotate(txt, (goodTimeValues[i], goodPeakValues[i]), color='blue', size=7)
-            
-            #plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
-            #plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
-            #plt.yscale('log')
-            
-            #plt.title(f'Figure {filename}: Plot of normalised first harmonic amplitude\n against normalised time, for an electric field wave propogating through a plasma.')
-            #plt.legend(loc='upper right')
-            #plt.grid(alpha=0.3)
-            #plt.ioff() # This so that the windows stay open - disables interactive mode
-            #plt.show()
-            
-            #calculate frequency
-            avgFreq, sigmaFreq = getFrequency(goodPeaks, goodTime)
-
-
-    #returns the frequency and damping with errors
-    #if not enough peaks these values aren't defined so will throw error
-    return avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude
-
-
+                #calculate the damping and plot the line
+                #only passes in the peak values
+                x ,y, dampCo, dampErr = getDamping(goodTimeValues, goodPeakValues, amplitudes)
+                #plt.plot(x, y, label='fit')
+                    
+                
+                #plot the raw data
+                #plt.plot(times, amplitudes, color='black', label='Raw values')
+                #plot x's where the peaks are
+                #plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+                #plot the noise-dominated data in a red dashed line
+                #plt.plot(noiseTime, noiseData, '--', color='red', label='Noise-dominated data')
+                
+                #plot the useful data in a green dashed line
+                #plt.plot(goodTime, goodData, '--', color='green', label='Useful data')
+                #plt.plot(goodTimeValues, goodPeakValues, 'x', color='peru', label='Peaks')
+                #label each peak with coordinates
+                #for i in range(len(goodTimeValues)):
+                #    txt = f'  ({goodTimeValues[i]}, {goodPeakValues[i]})'
+                #    plt.annotate(txt, (goodTimeValues[i], goodPeakValues[i]), color='blue', size=7)
+                
+                #plt.xlabel(r"Time [Normalised to ${\omega_p}^{-1}$]")
+                #plt.ylabel(r"First harmonic amplitude [Normalised to $\lambda_D$]")
+                #plt.yscale('log')
+                
+                #plt.title(f'Figure {filename}: Plot of normalised first harmonic amplitude\n against normalised time, for an electric field wave propogating through a plasma.')
+                #plt.legend(loc='upper right')
+                #plt.grid(alpha=0.3)
+                #plt.ioff() # This so that the windows stay open - disables interactive mode
+                #plt.show()
+                
+                #calculate frequency
+                avgFreq, sigmaFreq = getFrequency(goodPeaks, goodTime)
+    
+    
+            #returns the frequency and damping with errors
+            #if not enough peaks these values aren't defined so will throw error
+            return avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude
         
+        else: #two stream
+            
+            #gamma, gamma_err, t_growth, A_growth, t_fit, A_fit = get_growth_rate_simple(time_values, peak_values)
+           
+            x_fit, y_fit = getGrowthRate(peak_values, time_values)
+
+            
+            plt.plot(times, amplitudes, color='black', label='Raw values')
+        
+            #plot x's where the peaks are
+            plt.plot(time_values, peak_values, 'x', color='peru', label='Peaks')
+            
+            plt.plot(x_fit, y_fit)
+
+            #plt.yscale('log')
+        
+            
+
+            plt.title(f'Two stream instability growth for {filename}')
+            plt.show()
+        
+
+     
 def saveData(L, ncells, npart, s, landau):
     #save code in a file
     #filename to include: L - length of box (physical dependent variable), Number of cells, Number of particles, Number of repeats
@@ -569,11 +641,11 @@ def generate_data(npart=1000, LMultiple=4., ncells=20, landau=True):
         L=LMultiple
         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
         # Create some output classes
-        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        #p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
         s = Summary()                 # Calculates, stores and prints summary info
         # Summary stores an array of the first-harmonic amplitude
 
-        diagnostics_to_run = [p, s]   # Remove p to get much faster code! (the plotting)
+        diagnostics_to_run = [s]   # Remove p to get much faster code! (the plotting)
         
         # Run the simulation
         pos, vel = run(pos, vel, L, ncells, 
@@ -866,9 +938,6 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
             
                 
                 
-            
-    
-    
     #is 0 if there were no repeats, so need to find s.d. between values
     if sum(uncMeanNoiseValues) == 0:
         avgNoise = sum(avgNoiseValues) / len(avgNoiseValues)
@@ -884,7 +953,6 @@ def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
     
     #call function to plot all values against the number of cells
     plotVariation(loopingVar, varName, avgTotalFreqValues, uncMeanFreqValues, avgTotalDampValues, uncMeanDampValues, avgNoiseValues, uncMeanNoiseValues, totalTimes)
-    
     
 
     with open('results.csv', 'w', newline='') as csvfile:
@@ -934,10 +1002,13 @@ if __name__ == "__main__":
     
     #can only have generate data = False if it is for the same input parameters as when generated data
     #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
- #L = 100
- #ncells = 20 npart=1000, LMultiple=4., ncells=20, landau=True
- #npart = 10000
-    filename, timeTaken = generate_data(npart=10000, LMultiple=100, ncells=20, landau=False)       
+
+
+    filename, timeTaken = generate_data(npart=10000, LMultiple=100, ncells=20, landau=False)
+
+    with open('filenames.txt', 'r') as filenames:
+        filename = filenames.readlines()[-1].strip()
+        print(filename)
     plotData(filename, landau=False)
     
     

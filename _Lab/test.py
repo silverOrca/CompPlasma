@@ -832,11 +832,41 @@ def runTwoStream(runs, npart, LMultiple, ncells, velocities, generateData = True
             growthRateMeans.append(mean_gr)
             GRerrorMeans.append(error_mean_gr)
         
+        #save all the data in a file
+        with open('TwoStream_GrowthRates.txt', 'w') as f:
+            f.write('Velocity\tGrowth Rate\tError in Growth Rate\n')
+            for i in range(len(velocities)):
+                f.write(f'{velocities[i]}\t{growthRateMeans[i]}\t{GRerrorMeans[i]}\n')
+
         #prints out the means calculated for each velocity
         for i in range(len(growthRateMeans)):
             print(f'Growth rate for velocity {velocities[i]}: {growthRateMeans[i]:.6f} +/- {GRerrorMeans[i]:.6f}')
+            #make sure each error bar is shown on the plot
+        for i in range (len(velocities)):
+            plt.errorbar(velocities[i], growthRateMeans[i], yerr=GRerrorMeans[i])
+        plt.xlabel('Beam velocity')
+        plt.ylabel('Growth rate')
+        plt.title('Growth rate against beam velocity for two stream instability')
+        plt.grid(alpha=0.3)
+        plt.show()
+
+    else:
+        #read saved data from file
+        velocities = []
+        growthRateMeans = []
+        GRerrorMeans = []
+        with open('TwoStream_GrowthRates.txt', 'r') as f:
+            next(f)  #skip header
+            for line in f:
+                p = line.split()
+                velocities.append(float(p[0]))
+                growthRateMeans.append(float(p[1]))
+                GRerrorMeans.append(float(p[2]))
+
+        for i in range (len(velocities)):
+            print(f'Growth rate for velocity {velocities[i]}: {growthRateMeans[i]:.6f} +/- {GRerrorMeans[i]:.6f}')
         
-        plt.errorbar(velocities, growthRateMeans, 'x', yerr=GRerrorMeans)
+        plt.errorbar(velocities, growthRateMeans, yerr=GRerrorMeans, fmt='x')
         plt.xlabel('Beam velocity')
         plt.ylabel('Growth rate')
         plt.title('Growth rate against beam velocity for two stream instability')
@@ -1061,12 +1091,12 @@ if __name__ == "__main__":
     ncells = [20, 40, 60]
     npart = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
     LMultiple = [2, 3, 4, 5, 6, 7, 8]
-    velocities = [0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10.]
+    velocities = [0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.]
     
     #can only have generate data = False if it is for the same input parameters as when generated data
     #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
 
-    runTwoStream(5, 10000, 4, 20, velocities)
+    runTwoStream(5, 10000, 100, 20, velocities, generateData=False)
     
     
     

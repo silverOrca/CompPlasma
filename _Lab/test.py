@@ -822,13 +822,28 @@ def runTwoStream(runs, npart, LMultiple, ncells, velocities, generateData = True
                             filenames.write(line+'\n')
                     
      
-            growthRateMeans.append(np.mean(growthRates))
-            GRerrorMeans.append(np.mean(GRerrors))
+            #Properly propagate errors: use weighted mean (same formula as last time)
+            gr_array = np.array(growthRates)
+            gr_err_array = np.array(GRerrors)
+            weights = 1.0 / (gr_err_array**2 + 1e-12)  # avoid division by zero
+            mean_gr = np.sum(gr_array * weights) / np.sum(weights)
+            error_mean_gr = np.sqrt(1.0 / np.sum(weights))
+            
+            growthRateMeans.append(mean_gr)
+            GRerrorMeans.append(error_mean_gr)
         
+        #prints out the means calculated for each velocity
         for i in range(len(growthRateMeans)):
-            print(f'Growth rate for velocity {velocities[i]}: {growthRateMeans[i]} +/- {GRerrorMeans[i]}')
+            print(f'Growth rate for velocity {velocities[i]}: {growthRateMeans[i]:.6f} +/- {GRerrorMeans[i]:.6f}')
         
-
+        plt.errorbar(velocities, growthRateMeans, 'x', yerr=GRerrorMeans)
+        plt.xlabel('Beam velocity')
+        plt.ylabel('Growth rate')
+        plt.title('Growth rate against beam velocity for two stream instability')
+        plt.grid(alpha=0.3)
+        plt.show()
+                     
+###############################################################################
 
 #
 #if runs <= 0 then returns
@@ -1046,12 +1061,12 @@ if __name__ == "__main__":
     ncells = [20, 40, 60]
     npart = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
     LMultiple = [2, 3, 4, 5, 6, 7, 8]
-    velocities = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10.]
+    velocities = [0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10.]
     
     #can only have generate data = False if it is for the same input parameters as when generated data
     #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
 
-    runTwoStream(5, 5000, 4, 20, velocities)
+    runTwoStream(5, 10000, 4, 20, velocities)
     
     
     

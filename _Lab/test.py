@@ -481,7 +481,7 @@ def getGrowthRate(peak_values, peak_times):
     print(f"R^2 value of the fit is: {r_squared}")
 
     
-    return x_fit, y_fit
+    return x_fit, y_fit, params[1], errors[1]
     
     
 
@@ -577,7 +577,7 @@ def plotData(filename, landau=True):
             
             #gamma, gamma_err, t_growth, A_growth, t_fit, A_fit = get_growth_rate_simple(time_values, peak_values)
            
-            x_fit, y_fit = getGrowthRate(peak_values, time_values)
+            x_fit, y_fit, growthRate, GRerror = getGrowthRate(peak_values, time_values)
 
             
             plt.plot(times, amplitudes, color='black', label='Raw values')
@@ -593,6 +593,8 @@ def plotData(filename, landau=True):
 
             plt.title(f'Two stream instability growth for {filename}')
             plt.show()
+            
+            return growthRate, GRerror
         
 
      
@@ -628,7 +630,7 @@ def saveData(L, ncells, npart, s, landau):
       
         
 #gets the position and velocity data (amplitude)
-def generate_data(npart=1000, LMultiple=4., ncells=20, landau=True):
+def generate_data(npart=1000, LMultiple=4., ncells=20, vel=4., landau=True):
     # Generate initial condition
     # 
     t1=time.time()
@@ -639,7 +641,7 @@ def generate_data(npart=1000, LMultiple=4., ncells=20, landau=True):
         #ncells = 20
         #npart = 10000
         L=LMultiple
-        pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+        pos, vel = twostream(npart, L, vel) # Might require more npart than Landau!
         # Create some output classes
         #p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
         s = Summary()                 # Calculates, stores and prints summary info
@@ -784,199 +786,244 @@ def plotVariation(loopingVar, varName, avgTotalFreq, uncMeanFreq, avgTotalDamp, 
     plt.show()
 
 
+def runTwoStream(runs, npart, LMultiple, ncells, velocities, generateData = True):
+    #for two stream instability
+
+    if generateData:
+        growthRateMeans = []
+        GRerrorMeans = []
+        for vel in velocities:
+            growthRates = []
+            GRerrors = []
+            counter = 0 
+            while counter < runs:
+                try:
+                    filename, timeTaken = generate_data(npart=10000, LMultiple=100, ncells=20, landau=False)
+        
+                    with open('filenames.txt', 'r') as filenames:
+                        filename = filenames.readlines()[-1].strip()
+                        print(filename)
+                    growthRate, GRerror = plotData(filename, landau=False)
+                    counter+=1
+                    growthRates.append(growthRate)
+                    GRerrors.append(GRerror)
+                except:
+                    print('Data failed')
+                    with open('filenames.txt', 'r+') as filenames:
+                        lines = filenames.readlines()
+                        #deletes the data file with the same name as last filename in txt file
+                        os.remove(lines[-1].strip())
+                        filenames.seek(0)
+                        filenames.truncate()
+                        
+                        for line in lines[:-1]:
+                        #rewrites the entire file except with the last line
+                            line = line.strip()
+                            filenames.write(line+'\n')
+                    
+     
+            growthRateMeans.append(np.mean(growthRates))
+            GRerrorMeans.append(np.mean(GRerrors))
+        
+        for i in range(len(growthRateMeans)):
+            print(f'Growth rate for velocity {velocities[i]}: {growthRateMeans[i]} +/- {GRerrorMeans[i]}')
+        
+
 
 #
 #if runs <= 0 then returns
 def main(runs, npart, LMultiple, ncells, generateData=True, landau = True):
     
-    avgTotalFreqValues = [] 
-    uncMeanFreqValues = [] 
-    avgTotalDampValues = [] 
-    uncMeanDampValues = [] 
-    avgNoiseValues = [] 
-    uncMeanNoiseValues = []
-    totalTimes = []
-    
-    if generateData:
+    if landau:
+        avgTotalFreqValues = [] 
+        uncMeanFreqValues = [] 
+        avgTotalDampValues = [] 
+        uncMeanDampValues = [] 
+        avgNoiseValues = [] 
+        uncMeanNoiseValues = []
+        totalTimes = []
         
-        #here need to empty file so only the newly generated filenames are stored
-        with open('filenames.txt', 'r+') as filenames:
-            filenames.seek(0)
-            filenames.truncate()
-        
-        #checks to see which is the variable we are changing
-        #saves the loopingVar in a file (which overwrites each time) for if not generating data
-        if isinstance(npart, list):
-            loopingVar = npart
-            varName = 'npart'
-            with open('changedVar.txt', 'w') as changedVarFile:
-                changedVarFile.write('npart')
-        elif isinstance(LMultiple, list):
-            loopingVar = LMultiple
-            varName = 'LMultiple'
-            with open('changedVar.txt', 'w') as changedVarFile:
-                changedVarFile.write('LMultiple')
-        elif isinstance(ncells, list):
-            loopingVar = ncells
-            varName = 'ncells'
-            with open('changedVar.txt', 'w') as changedVarFile:
-                changedVarFile.write('ncells')
-        else:
-            return #loopingVar = 1. #could be any value, but with length of 1
-        
+        if generateData:
             
-        #loops as many times as there are different input parameters
-        for value in loopingVar:
-            #this gives the total time for the repeat runs with same parameters
-            totalTime = 0.
-            #to save values and find average
-            frequencies = []
-            freqError = []
-            dampingCo = []
-            dampingError = []
-            noiseAmplitudes = []
+            #here need to empty file so only the newly generated filenames are stored
+            with open('filenames.txt', 'r+') as filenames:
+                filenames.seek(0)
+                filenames.truncate()
             
-            if runs > 0:
-                
-                #when counter = number of runs it will stop looping
-                counter = 0
-                
-                while counter < runs:
-
-                    try:
-                        #generate data with correct parameters
-                        if loopingVar == npart:
-                            filename, timeTaken = generate_data(npart=value, LMultiple=LMultiple, ncells=ncells, landau=landau)
-                        elif loopingVar == LMultiple:
-                            filename, timeTaken = generate_data(npart=npart, LMultiple=value, ncells=ncells, landau=landau)
-                        elif loopingVar == ncells:
-                            filename, timeTaken = generate_data(npart=npart, LMultiple=LMultiple, ncells=value, landau=landau)
-                        
-                        filename=filename.strip() #to remove any \n
-
-                        #gets the average values for one plot
-                        avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(filename)
-                        
-                        totalTime += timeTaken
-                        counter += 1 
-                        
-                        frequencies.append(avgFreq)
-                        freqError.append(sigmaFreq)
-                        dampingCo.append(dampCo)
-                        dampingError.append(dampErr)
-                        noiseAmplitudes.append(noiseAmplitude)
-                        
-                    except:
-                        with open('filenames.txt', 'r+') as filenames:
-                            lines = filenames.readlines()
-                            #deletes the data file with the same name as last filename in txt file
-                            os.remove(lines[-1].strip())
-                            filenames.seek(0)
-                            filenames.truncate()
-                            
-                            for line in lines[:-1]:
-                            #rewrites the entire file except with the last line
-                                line = line.strip()
-                                filenames.write(line+'\n')
-                        print('Looping again')
-                
-                
-                    
-            #for only running code once - mainly for testing purposes   
+            #checks to see which is the variable we are changing
+            #saves the loopingVar in a file (which overwrites each time) for if not generating data
+            if isinstance(npart, list):
+                loopingVar = npart
+                varName = 'npart'
+                with open('changedVar.txt', 'w') as changedVarFile:
+                    changedVarFile.write('npart')
+            elif isinstance(LMultiple, list):
+                loopingVar = LMultiple
+                varName = 'LMultiple'
+                with open('changedVar.txt', 'w') as changedVarFile:
+                    changedVarFile.write('LMultiple')
+            elif isinstance(ncells, list):
+                loopingVar = ncells
+                varName = 'ncells'
+                with open('changedVar.txt', 'w') as changedVarFile:
+                    changedVarFile.write('ncells')
             else:
-                print('Need +ve number of runs to get data')
+                return #loopingVar = 1. #could be any value, but with length of 1
+            
+                
+            #loops as many times as there are different input parameters
+            for value in loopingVar:
+                #this gives the total time for the repeat runs with same parameters
+                totalTime = 0.
+                #to save values and find average
+                frequencies = []
+                freqError = []
+                dampingCo = []
+                dampingError = []
+                noiseAmplitudes = []
+                
+                if runs > 0:
+                    
+                    #when counter = number of runs it will stop looping
+                    counter = 0
+                    
+                    while counter < runs:
+    
+                        try:
+                            #generate data with correct parameters
+                            if loopingVar == npart:
+                                filename, timeTaken = generate_data(npart=value, LMultiple=LMultiple, ncells=ncells, landau=landau)
+                            elif loopingVar == LMultiple:
+                                filename, timeTaken = generate_data(npart=npart, LMultiple=value, ncells=ncells, landau=landau)
+                            elif loopingVar == ncells:
+                                filename, timeTaken = generate_data(npart=npart, LMultiple=LMultiple, ncells=value, landau=landau)
+                            
+                            filename=filename.strip() #to remove any \n
+    
+                            #gets the average values for one plot
+                            avgFreq, sigmaFreq, dampCo, dampErr, noiseAmplitude = plotData(filename)
+                            
+                            totalTime += timeTaken
+                            counter += 1 
+                            
+                            frequencies.append(avgFreq)
+                            freqError.append(sigmaFreq)
+                            dampingCo.append(dampCo)
+                            dampingError.append(dampErr)
+                            noiseAmplitudes.append(noiseAmplitude)
+                            
+                        except:
+                            with open('filenames.txt', 'r+') as filenames:
+                                lines = filenames.readlines()
+                                #deletes the data file with the same name as last filename in txt file
+                                os.remove(lines[-1].strip())
+                                filenames.seek(0)
+                                filenames.truncate()
+                                
+                                for line in lines[:-1]:
+                                #rewrites the entire file except with the last line
+                                    line = line.strip()
+                                    filenames.write(line+'\n')
+                            print('Looping again')
+                    
+                    
+                        
+                #for only running code once - mainly for testing purposes   
+                else:
+                    print('Need +ve number of runs to get data')
+                    return
+                            
+                        
+                        
+                print(f'Time taken to generate data: {totalTime}') 
+                #calculate average value for each set of runs of same parameters
+                avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
+               
+                avgTotalFreqValues.append(avgTotalFreq)
+                uncMeanFreqValues.append(uncMeanFreq)  # put [0] if 1 run
+                avgTotalDampValues.append(avgTotalDamp) 
+                uncMeanDampValues.append(uncMeanDamp) # put [0] if 1 run
+                avgNoiseValues.append(avgNoise)
+                uncMeanNoiseValues.append(uncMeanNoise) # put [0] if 1 run
+                totalTimes.append(totalTime)
+                
+         
+        #for only running code without generating data - mainly for testing purposes
+        else:
+            try:
+                with open('results.csv', 'r') as csvfile:
+                    reader = csv.reader(csvfile)
+                    next(reader)  #skip header row
+                    
+                    #create some empty variables for setting these values
+                    loopingVar = []
+                    varName = None
+                    
+                    for row in reader:
+                        if len(row) >= 9:  #ensure we have all columns
+                            if varName is None:
+                                varName = row[0]  #get parameter name from first row
+                            
+                            #parameter value
+                            loopingVar.append(float(row[1]))  
+                            avgTotalFreqValues.append(float(row[2]))
+                            uncMeanFreqValues.append(float(row[3]))
+                            avgTotalDampValues.append(float(row[4]))
+                            uncMeanDampValues.append(float(row[5]))
+                            avgNoiseValues.append(float(row[6]))
+                            uncMeanNoiseValues.append(float(row[7]))
+                            totalTimes.append(float(row[8]))
+                    
+                    print(f"Loaded results for {varName} from results.csv")
+                    
+            except FileNotFoundError:
+                print("Error: results.csv not found. Run with generateData=True first.")
                 return
-                        
+            except Exception as e:
+                print(f"Error loading results: {e}")
+                
                     
                     
-            print(f'Time taken to generate data: {totalTime}') 
-            #calculate average value for each set of runs of same parameters
-            avgTotalFreq, uncMeanFreq, avgTotalDamp, uncMeanDamp, avgNoise, uncMeanNoise = meanCalc(frequencies, freqError, dampingCo, dampingError, noiseAmplitudes)
-           
-            avgTotalFreqValues.append(avgTotalFreq)
-            uncMeanFreqValues.append(uncMeanFreq)  # put [0] if 1 run
-            avgTotalDampValues.append(avgTotalDamp) 
-            uncMeanDampValues.append(uncMeanDamp) # put [0] if 1 run
-            avgNoiseValues.append(avgNoise)
-            uncMeanNoiseValues.append(uncMeanNoise) # put [0] if 1 run
-            totalTimes.append(totalTime)
+        #is 0 if there were no repeats, so need to find s.d. between values
+        if sum(uncMeanNoiseValues) == 0:
+            avgNoise = sum(avgNoiseValues) / len(avgNoiseValues)
+            varianceNoise=0.
+            for n in avgNoiseValues:
+                varianceNoise += (n-avgNoise)**2
+        
+            #s.d. equation
+            uncMeanNoise = sqrt(varianceNoise/(len(avgNoiseValues)-1))
             
-     
-    #for only running code without generating data - mainly for testing purposes
-    else:
-        try:
-            with open('results.csv', 'r') as csvfile:
-                reader = csv.reader(csvfile)
-                next(reader)  #skip header row
-                
-                #create some empty variables for setting these values
-                loopingVar = []
-                varName = None
-                
-                for row in reader:
-                    if len(row) >= 9:  #ensure we have all columns
-                        if varName is None:
-                            varName = row[0]  #get parameter name from first row
-                        
-                        #parameter value
-                        loopingVar.append(float(row[1]))  
-                        avgTotalFreqValues.append(float(row[2]))
-                        uncMeanFreqValues.append(float(row[3]))
-                        avgTotalDampValues.append(float(row[4]))
-                        uncMeanDampValues.append(float(row[5]))
-                        avgNoiseValues.append(float(row[6]))
-                        uncMeanNoiseValues.append(float(row[7]))
-                        totalTimes.append(float(row[8]))
-                
-                print(f"Loaded results for {varName} from results.csv")
-                
-        except FileNotFoundError:
-            print("Error: results.csv not found. Run with generateData=True first.")
-            return
-        except Exception as e:
-            print(f"Error loading results: {e}")
+            for i in range(len(uncMeanNoiseValues)):
+                uncMeanNoiseValues[i] = uncMeanNoise
+        
+        #call function to plot all values against the number of cells
+        plotVariation(loopingVar, varName, avgTotalFreqValues, uncMeanFreqValues, avgTotalDampValues, uncMeanDampValues, avgNoiseValues, uncMeanNoiseValues, totalTimes)
+        
+    
+        with open('results.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
             
-                
-                
-    #is 0 if there were no repeats, so need to find s.d. between values
-    if sum(uncMeanNoiseValues) == 0:
-        avgNoise = sum(avgNoiseValues) / len(avgNoiseValues)
-        varianceNoise=0.
-        for n in avgNoiseValues:
-            varianceNoise += (n-avgNoise)**2
+            #write header row
+            writer.writerow(['Parameter Name', 'Parameter Values', 'Avg Frequency', 'Freq Error', 
+                             'Avg Damping', 'Damping Error', 'Avg Noise', 'Noise Error', 'Total Time'])
+            
+            #write data rows - one for each parameter value
+            for i in range(len(loopingVar)):
+                writer.writerow([
+                    varName,  # Parameter name (e.g., 'ncells')
+                    loopingVar[i],  # Parameter value (e.g., 20)
+                    avgTotalFreqValues[i],
+                    uncMeanFreqValues[i],
+                    avgTotalDampValues[i],
+                    uncMeanDampValues[i],
+                    avgNoiseValues[i],
+                    uncMeanNoiseValues[i],
+                    totalTimes[i]
+                ])
+            
+            print(f"Results saved to results.csv")
     
-        #s.d. equation
-        uncMeanNoise = sqrt(varianceNoise/(len(avgNoiseValues)-1))
-        
-        for i in range(len(uncMeanNoiseValues)):
-            uncMeanNoiseValues[i] = uncMeanNoise
-    
-    #call function to plot all values against the number of cells
-    plotVariation(loopingVar, varName, avgTotalFreqValues, uncMeanFreqValues, avgTotalDampValues, uncMeanDampValues, avgNoiseValues, uncMeanNoiseValues, totalTimes)
-    
-
-    with open('results.csv', 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        
-        #write header row
-        writer.writerow(['Parameter Name', 'Parameter Values', 'Avg Frequency', 'Freq Error', 
-                         'Avg Damping', 'Damping Error', 'Avg Noise', 'Noise Error', 'Total Time'])
-        
-        #write data rows - one for each parameter value
-        for i in range(len(loopingVar)):
-            writer.writerow([
-                varName,  # Parameter name (e.g., 'ncells')
-                loopingVar[i],  # Parameter value (e.g., 20)
-                avgTotalFreqValues[i],
-                uncMeanFreqValues[i],
-                avgTotalDampValues[i],
-                uncMeanDampValues[i],
-                avgNoiseValues[i],
-                uncMeanNoiseValues[i],
-                totalTimes[i]
-            ])
-        
-        print(f"Results saved to results.csv")
     
     return
     
@@ -999,16 +1046,12 @@ if __name__ == "__main__":
     ncells = [20, 40, 60]
     npart = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
     LMultiple = [2, 3, 4, 5, 6, 7, 8]
+    velocities = [1., 2., 3., 4., 5., 6., 7., 8., 9., 10.]
     
     #can only have generate data = False if it is for the same input parameters as when generated data
     #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
 
-
-    filename, timeTaken = generate_data(npart=10000, LMultiple=100, ncells=20, landau=False)
-
-    with open('filenames.txt', 'r') as filenames:
-        filename = filenames.readlines()[-1].strip()
-        print(filename)
-    plotData(filename, landau=False)
+    runTwoStream(5, 5000, 4, 20, velocities)
+    
     
     

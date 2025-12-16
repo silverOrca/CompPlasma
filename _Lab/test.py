@@ -869,28 +869,30 @@ def runTwoStream(runs, npart, LMultiple, ncells, velocities, generateData = True
         
 
         # #remove velocities 3 and 13 because they are outliers in this case
-        # velocities = [v for i, v in enumerate(velocities) if i not in [3, 13]]
-        # growthRateMeans = [gr for i, gr in enumerate(growthRateMeans) if i not in [3, 13]]
-        # GRerrorMeans = [err for i, err in enumerate(GRerrorMeans) if i not in [3, 13]]
+        velocities = [v for i, v in enumerate(velocities) if i not in [13]]
+        growthRateMeans = [gr for i, gr in enumerate(growthRateMeans) if i not in [13]]
+        GRerrorMeans = [err for i, err in enumerate(GRerrorMeans) if i not in [13]]
         
 
         #want to fit a curve to this data using polyfit
-        p = np.polyfit(velocities, growthRateMeans, 2)
+        p = np.polyfit(velocities, growthRateMeans, 4)
         x_fit = np.linspace(min(velocities), max(velocities), 100)
         y_fit = np.polyval(p, x_fit)
-        plt.plot(x_fit, y_fit, 'r-', label='Fitted curve')
+        plt.plot(x_fit, y_fit, 'r-', label='Fitted curve', alpha=0.5)
 
-        # #want to find minima of fitted curve using find_peaks on negative of fitted curve
-        # inverted_curve = -y_fit
-        # minima_indices, _ = find_peaks(inverted_curve)
-        # minima_x = x_fit[minima_indices]
-        # minima_y = y_fit[minima_indices]
+        #want to find minima of fitted curve using find_peaks on negative of fitted curve
+        inverted_curve = -y_fit
+        minima_indices, _ = find_peaks(inverted_curve)
+        minima_x = x_fit[minima_indices]
+        minima_y = y_fit[minima_indices]
 
-        # #calculate errors in minima using covariance matrix from polyfit
-        # errors = np.sqrt(np.diag(np.polyfit(velocities, growthRateMeans, 3, cov=True)[1]))
-        # print(f'Errors in fitted parameters: {errors}')
+        #calculate errors in minima using covariance matrix from polyfit
+        errors = np.sqrt(np.diag(np.polyfit(velocities, growthRateMeans, 3, cov=True)[1]))
+        print(f'Errors in fitted parameters: {errors}')
 
-        # plt.scatter(minima_x, minima_y, color='black', marker='o', label=f'Minima of fitted curve: ({minima_x[0]:.3f}, {minima_y[0]:.3f})')
+
+        for i in range(len(minima_x)):
+            plt.scatter(minima_x[i], minima_y[i], color='black', marker='o', label=f'Minima of fitted curve: ({minima_x[i]:.3f}, {minima_y[i]:.3f})')
        
         # #plot the y-intercept of the fitted curve
         # y_intercept = np.polyval(p, 0)
@@ -1130,7 +1132,7 @@ if __name__ == "__main__":
     #can only have generate data = False if it is for the same input parameters as when generated data
     #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
 
-    runTwoStream(5, 20000, 100, 20, velocities, generateData=False)
+    runTwoStream(5, 10000, 100, 20, velocities, generateData=False)
     
     
     

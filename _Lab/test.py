@@ -18,6 +18,7 @@ from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
+from scipy.interpolate import interp1d
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -300,7 +301,7 @@ def twostream(npart, L, vbeam=2):
     # Start with a uniform distribution of positions
     pos = random.uniform(0., L, npart)
     # Normal velocity distribution
-    vel = random.normal(0.0, 1.0, npart)
+    vel = random.normal(0.0, 0.1, npart)
     
     np2 = int(npart / 2)
     vel[:np2] += vbeam  # Half the particles moving one way
@@ -862,16 +863,49 @@ def runTwoStream(runs, npart, LMultiple, ncells, velocities, generateData = True
                 velocities.append(float(p[0]))
                 growthRateMeans.append(float(p[1]))
                 GRerrorMeans.append(float(p[2]))
-
+                
         for i in range (len(velocities)):
             print(f'Growth rate for velocity {velocities[i]}: {growthRateMeans[i]:.6f} +/- {GRerrorMeans[i]:.6f}')
         
-        plt.errorbar(velocities, growthRateMeans, yerr=GRerrorMeans, fmt='x')
-        plt.xlabel('Beam velocity')
+
+        # #remove velocities 3 and 13 because they are outliers in this case
+        # velocities = [v for i, v in enumerate(velocities) if i not in [3, 13]]
+        # growthRateMeans = [gr for i, gr in enumerate(growthRateMeans) if i not in [3, 13]]
+        # GRerrorMeans = [err for i, err in enumerate(GRerrorMeans) if i not in [3, 13]]
+        
+
+        #want to fit a curve to this data using polyfit
+        p = np.polyfit(velocities, growthRateMeans, 2)
+        x_fit = np.linspace(min(velocities), max(velocities), 100)
+        y_fit = np.polyval(p, x_fit)
+        plt.plot(x_fit, y_fit, 'r-', label='Fitted curve')
+
+        # #want to find minima of fitted curve using find_peaks on negative of fitted curve
+        # inverted_curve = -y_fit
+        # minima_indices, _ = find_peaks(inverted_curve)
+        # minima_x = x_fit[minima_indices]
+        # minima_y = y_fit[minima_indices]
+
+        # #calculate errors in minima using covariance matrix from polyfit
+        # errors = np.sqrt(np.diag(np.polyfit(velocities, growthRateMeans, 3, cov=True)[1]))
+        # print(f'Errors in fitted parameters: {errors}')
+
+        # plt.scatter(minima_x, minima_y, color='black', marker='o', label=f'Minima of fitted curve: ({minima_x[0]:.3f}, {minima_y[0]:.3f})')
+       
+        # #plot the y-intercept of the fitted curve
+        # y_intercept = np.polyval(p, 0)
+        # plt.scatter(0, y_intercept, color='green', label=f'Y-intercept of fitted curve: {y_intercept:.3f}')
+        
+        
+        
+        plt.errorbar(velocities, growthRateMeans, yerr=GRerrorMeans, fmt='x', label='Data')
+        plt.xlabel(r'Beam velocity, normalised to $\omega_{pe} / \lambda_D$')
         plt.ylabel('Growth rate')
         plt.title('Growth rate against beam velocity for two stream instability')
+        plt.legend(loc='best')
         plt.grid(alpha=0.3)
         plt.show()
+        
                      
 ###############################################################################
 
@@ -1091,12 +1125,12 @@ if __name__ == "__main__":
     ncells = [20, 40, 60]
     npart = [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
     LMultiple = [2, 3, 4, 5, 6, 7, 8]
-    velocities = [0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20., 21., 22., 23., 24., 25.]
+    velocities = [0., 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16., 17.]
     
     #can only have generate data = False if it is for the same input parameters as when generated data
     #main(5, 5000, LMultiple, 100, generateData=True, landau = False)
 
-    runTwoStream(5, 10000, 100, 20, velocities, generateData=False)
+    runTwoStream(5, 20000, 100, 20, velocities, generateData=False)
     
     
     

@@ -35,6 +35,7 @@ def fft_integrate(y, dx):
     
     return ifft(f) # Reverse Fourier Transform
 
+
 if __name__ == "__main__":
     from numpy import linspace, pi, sin, cos
     import matplotlib.pyplot as plt

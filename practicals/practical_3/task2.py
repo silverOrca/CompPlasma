@@ -6,7 +6,7 @@ Created on Mon Oct 20 12:58:11 2025
 
 Poisson's equation fourier solver for 1d box
 
-d^2 rho / dx^2 = -rho(x)
+d^2 phi / dx^2 = -rho(x)
 """
 #To do:
 #   - will need to calculate k at some point: k = 2 pi n/L = 2 pi / lambda

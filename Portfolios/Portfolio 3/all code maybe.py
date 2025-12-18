@@ -7,6 +7,7 @@ https://youjunhu.github.io/research_notes/particle_simulation/particle_simulatio
 
 
 1: solve Poisson's eq. using fft methods (use .real for return variable)
+    - dE/dx = rho, and rho = 1 - n_e
 
 
 
@@ -62,7 +63,7 @@ def fourier_derivative ( field , xx ):
 x = np.linspace(0, 1, 101, endpoint = False)
 
 #electron density equation     
-ne = 1+ np.sin(2*np.pi*x)
+ne = 1 + np.sin(2*np.pi*x)
 
 
 
@@ -70,8 +71,20 @@ eField = solvePoisson(x, ne)
 
 deFielddx = fourier_derivative(eField, x)
 
-plt.plot(x, eField, label='eField')
-plt.plot(x, 1-deFielddx, label='1-dE/dx')
+# After calculating, add:
+error = np.max(np.abs((1 - deFielddx) - ne))
+print(f"Maximum error: {error}")
+if error > 1e-10:
+    print("Warning: 1 - dE/dx ≠ n_e!")
 
+plt.figure(figsize=(10, 6))
+plt.plot(x, ne, 'b-', label=r'$\hat{n}_e$')
+plt.plot(x, eField, 'r-', label=r'$\hat{E}_x$')
+plt.plot(x, 1-deFielddx, 'g--', label=r'$1 - d\hat{E}_x/d\hat{x}$')
+plt.xlabel(r'$\hat{x}$')
+plt.ylabel('Normalized values')
 plt.legend(loc='best')
+plt.title('Task 3: Poisson solver verification')
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
 plt.show()

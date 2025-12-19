@@ -23,7 +23,7 @@ from scipy.integrate import solve_ivp
 
 
 
-#computationally solve for phi doing fourier
+#computationally solve for phi doing fourier (Poisson solver)
 def compSolve(x, rho):
     dx = x[1]-x[0]
     nx = len(x)

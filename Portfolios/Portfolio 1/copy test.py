@@ -84,8 +84,9 @@ def plotting(Bmag):
     plt.pcolormesh(xx, yy, Bmag.T, shading = 'auto')
     plt.xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8) 
     plt.ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
-    plt.text(-4, -11, r'Figure 1: Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
-    plt.colorbar()
+    #plt.text(-4, -11, r'Figure 1: Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
+    plt.title('Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
+    plt.colorbar(label=r'Magnetic field, $\hat{B}_z(\hat{x}, \hat{y})$, normalised to $B_r$')
 
 
 # #runs the code to output the B_func plot
@@ -124,6 +125,12 @@ def integrate_and_plot(E_x, E_y, B_mag):
     
     trajectory_axis = trajectory_plot.add_subplot(1,1,1)
     
+    #individual trajectories
+    indTrajFig, indTrajax = plt.subplots(2,2, figsize=(10,6))
+    #flatten for easy indexing
+    indTrajax_flat = indTrajax.flatten()
+    colors = ['dodgerblue','orange','limegreen','red']
+    
     #choosing B colour to better see the trajectories
     im = trajectory_axis.pcolormesh(xx, yy, B_mag.T, shading = 'auto', cmap='bone')
     
@@ -146,29 +153,68 @@ def integrate_and_plot(E_x, E_y, B_mag):
         #do final e_k / initial e_k for each particle
         print('E_k,final/E_k,initial for particle ' + str(i+1) + ': ' + str(e_k[-1]/e_k[0]))
         
-        ek_axis.plot(time, e_k, label =r'$E_{x} = $ '+str(E_x)+r', $E_{y} = $'+str(E_y), linewidth=0.8)
+        #text for legend with all varying parameters
+        txt = 'Particle '+str(i+1)+r': Initial $\hat{x}$ = '+str(initial_x[i])+r', initial $\hat{y}$ = '+str(initial_y[i])+r', initial $\hat{v}_x$ = '+str(initial_vx[i])+r', initial $\hat{v}_y$ = '+str(initial_vy[i])+r', charge $(\hat{q})$ = '+str(q[i])+r', mass $(\hat{m})$ = '+str(m[i])
+        
+        ek_axis.plot(time, e_k, label = txt, linewidth=0.8, color=colors[i])
+        
         
         #plot the trajectory - y against x
-        txt = 'Particle '+str(i+1)+r': Initial $\hat{x}$ = '+str(initial_x[i])+r', initial $\hat{y}$ = '+str(initial_y[i])+r', initial $\hat{v}_x$ = '+str(initial_vx[i])+r', initial $\hat{v}_y$ = '+str(initial_vy[i])+r', charge $(\hat{q})$ = '+str(q[i])+r', mass $(\hat{m})$ = '+str(m[i])
-        trajectory_axis.plot(x, y, label=txt, linewidth=0.5)
+        trajectory_axis.plot(x, y, label=txt, linewidth=0.5, color=colors[i])
+        
+        #create individual plot for each particle
+        # individual_fig = plt.figure()
+        # individual_axis = individual_fig.add_subplot(1, 1, 1)
+        # individual_axis.pcolormesh(xx, yy, B_mag.T, shading='auto', cmap='bone')
+        # individual_axis.plot(x, y, color='blue', linewidth=0.5)
+        # individual_axis.set_xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8)
+        # individual_axis.set_ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
+        
+        #Calculate trajectory bounds and zoom in with padding
+        x_min, x_max = x.min(), x.max()
+        y_min, y_max = y.min(), y.max()
+        x_padding = (x_max - x_min) * 0.3
+        y_padding = (y_max - y_min) * 0.3
+        # individual_axis.set_xlim(x_min - x_padding, x_max + x_padding)
+        # individual_axis.set_ylim(y_min - y_padding, y_max + y_padding)
+        
+        # individual_axis.grid(alpha=0.3)
+        # individual_axis.legend([txt], loc='upper right', fontsize=8)
+        # individual_axis.set_title(f'Particle {i+1} Trajectory (E_x={E_x}, E_y={E_y})')
+        # individual_fig.show()
+        
+        ax = indTrajax_flat[i]
+        ax.pcolormesh(xx, yy, B_mag.T, shading='auto', cmap='bone')
+        ax.plot(x, y, linewidth=0.5, label=txt, color=colors[i])
+        ax.set_xlim(x_min - x_padding, x_max + x_padding)
+        ax.set_ylim(y_min - y_padding, y_max + y_padding)
+        ax.grid(alpha=0.3)
+        
+        
 
     #e_k axes labelling
-    ek_axis.set_xlabel(r'Time (s), normalised to the thermal Hydrogen gyro-period, $\tau_H$')
-    ek_axis.set_ylabel(r'Kinetic energy, $\hat{E}_k$, normalised to')
-    ek_axis.legend(loc='center right', bbox_to_anchor=(1.4, 0.5), fontsize=10)
+    ek_axis.set_xlabel(r'Time, normalised to the thermal Hydrogen gyro-period, $\tau_H$')
+    ek_axis.set_ylabel(r'Kinetic energy, $\hat{E}_k$, normalised to $\frac{1}{2}m_H\nu_{th,H}^2$')
+    ek_axis.legend(loc='center right', bbox_to_anchor=(1.2, -0.4), fontsize=8)
     ek_axis.grid(alpha=0.3)
-    ek_axis.set_title('Kinetic energy of particles varying with time')
+    ek_axis.set_title('Kinetic energy of particles varying with time over a spatially\nvarying magnetic field and constant electric field.')
 
     #trajectory axes labelling
     trajectory_axis.set_xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8)
     trajectory_axis.set_ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
     trajectory_axis.grid(alpha=0.3)
-    trajectory_axis.legend(loc='lower center', bbox_to_anchor=(0.5,-0.6), fontsize=8)
+    trajectory_axis.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), fontsize=8)
     
-    traj_caption = r'Fig Electric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+'), normalised to .\n'
-    trajectory_axis.text(-5, -12, traj_caption, fontsize=8)
-    trajectory_axis.set_title('Trajectories of particles over the background magnetic field')
-    trajectory_plot.colorbar(im, ax=trajectory_axis, label=r'Magnetic field, $\hat{B}$, normalised to')
+    #traj_caption = r'Fig Electric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $\nu_{th,H}B_r$.'
+    #trajectory_axis.text(-5, -12, traj_caption, fontsize=8)
+    trajectory_axis.set_title('Trajectories of particles over the background magnetic field with\nelectric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $\nu_{th,H}B_r$.')
+    trajectory_plot.colorbar(im, ax=trajectory_axis, label=r'Magnetic field, $\hat{B}_z(\hat{x}, \hat{y})$, normalised to $B_r$')
+    
+    indTrajFig.colorbar(im, ax=indTrajax, label=r'Magnetic field, $\hat{B}$, normalised to $B_r$')
+    indTrajFig.suptitle('Individual trajectories of particles over the background magnetic field with electric field,\n$\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $\nu_{th,H}B_r$.')
+    indTrajFig.text(0.5, 0.04, r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8, ha='center')
+    indTrajFig.text(0.04, 0.5, r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', va='center', rotation='vertical')
+    indTrajFig.legend(loc='lower center', bbox_to_anchor=(0.45,-0.15), fontsize=8)
 
     plt.show()
     

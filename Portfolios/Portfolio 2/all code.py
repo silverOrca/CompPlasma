@@ -10,6 +10,10 @@ Portfolio 2
 - solving for rhs vector, rho
 
 
+Plots:
+    - For no R, v=0.2 and v=-0.2 (can use same code and have R set to 0)
+    - For v=0.2, varying R
+
 """
 from scipy.sparse import lil_matrix
 from scipy.sparse.linalg import spsolve
@@ -77,23 +81,43 @@ def return_sparse_matrix(aVal, v, R):
     return M
 
 
-for value in v:
-    for co in R:
+def main():
+    fig, ax = plt.subplots(2, 1, figsize=(10,10))
+    
+    for idx, value in enumerate(v):
+        axPlot = ax[idx]
+        
+        for co in R:
+    
+            M = return_sparse_matrix(aVal=0.0, v=value, R=co)
+        
+            #change the format of M from lil to CSR so spsolve can work
+            M = M.tocsr()
+             
+            solution = spsolve(M, rho)
+            
+            rhocheck = M.dot(solution)
+            
+            #Print the error - use abs for full value and find difference between check (calculated) value and defined value
+            print('Max absolute error is {num}'.format(num=abs(rhocheck[1:-1]-rho[1:-1]).max()))
+            
+            #Plot the solution
+            axPlot.plot(xval, solution, '-', label=f'R = {co}')
 
-        M = return_sparse_matrix(aVal=0.0, v=value, R=co)
+        axPlot.legend(loc='lower left')
+        axPlot.set_title(fr'Plot for advection speed, $v={value}$')
+        
+    plt.xlabel(r'$x$') ; plt.ylabel(r'\$')
+    fig.text(0.5, 0.04, r'$x$', fontsize=8, ha='center')
+    fig.text(0.04, 0.5, 'P', va='center', rotation='vertical')
+    fig.suptitle('Pressure against position')
     
-        #change the format of M from lil to CSR so spsolve can work
-        M = M.tocsr()
-         
-        solution = spsolve(M, rho)
-        
-        #rhocheck = M.dot(solution)
-        
-        #Print the error - use abs for full value and find difference between check (calculated) value and defined value
-        #print('Max absolute error is {num}'.format(num=abs(rhocheck[1:-1]-rho[1:-1]).max()))
-        
-        #Plot the solution
-        plt.plot(xval, solution, '-')
-    
-#plt.xlabel(r'$x$') ; plt.ylabel(r'$\$')
     plt.show()
+
+
+
+if __name__ == '__main__':
+    main()
+
+
+

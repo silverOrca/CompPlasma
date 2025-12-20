@@ -17,6 +17,10 @@ Portfolio 2
 Plots:
     - For no R, v=0.2 and v=-0.2 (can use same code and have R set to 0)
     - For v=0.2, varying R
+    
+    
+Left to do:
+    - add units to axes?
 
 """
 from scipy.sparse import lil_matrix

@@ -63,30 +63,6 @@ def fourier_derivative ( field , xx ):
 
 
 
-x = np.linspace(0, 1, 101, endpoint = False)
-
-#electron density equation     
-ne = 1 + np.sin(2*np.pi*x)
-
-
-
-eField = solvePoisson(x, ne)
-
-dEdx = fourier_derivative(eField, x)
-
-
-plt.figure(figsize=(10, 6))
-plt.plot(x, ne, color='green', label=r'$\hat{n}_e$')
-plt.plot(x, eField, 'r-', label=r'$\hat{E}_x$')
-plt.plot(x, 1-dEdx, '--', color='orange', label=r'$1 - d\hat{E}_x/d\hat{x}$')
-plt.xlabel(r'$\hat{x}$')
-plt.ylabel('Normalized values')
-plt.legend(loc='best')
-plt.title('Task 3: Poisson solver verification')
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
-
 
 
 
@@ -127,44 +103,77 @@ def evolveFunc(curT, curF, x, q_e, m_e, T_e):
 
 
 
+def staticPoissonSolver():
+    x = np.linspace(0, 1, 101, endpoint = False)
 
-x2 = linspace(0, 1, 401, endpoint=False)
-time = linspace(0, 2*np.pi, 251)
-
-q_e = -1.0
-m_e = 1.0
-T_e = 0.0
-
-kx = 4
-amp = 0.01
-
-nx=len(x2)
-
-initialNe = initial_ne(x2, kx=4, amp=0.01)
-initialUe = initial_Ue(x2)
-
-#needs to be concatenated into one array for solve_ivp
-f0 = concatenate([initialNe, initialUe])
-
-#solve the system of equations
-solution = solve_ivp(evolveFunc, [0, time[-1]], f0, t_eval=time, args=(x2,q_e,m_e,T_e))
-
-#unpack solution
-neSol = solution.y[:nx, :].T
-UeSol = solution.y[:,nx:]
+    #electron density equation     
+    ne = 1 + np.sin(2*np.pi*x)
 
 
-#do contour plot of electron density with x on y axis and t on x axis
-X, T = np.meshgrid(x2, solution.t)
-plt.figure(figsize=(10, 6))
-contour = plt.contourf(T, X, neSol, levels=50, cmap='viridis')
-plt.colorbar(contour, label=r'$\hat{n}_e$')
-plt.xlabel(r'$\hat{t}$')
-plt.ylabel(r'$\hat{x}$')
-plt.title('Electron Density Evolution Over Time')
-plt.tight_layout()
-plt.show()
+    eField = solvePoisson(x, ne)
+
+    dEdx = fourier_derivative(eField, x)
 
 
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, ne, color='green', label=r'$\hat{n}_e$')
+    plt.plot(x, eField, 'r-', label=r'$\hat{E}_x$')
+    plt.plot(x, 1-dEdx, '--', color='orange', label=r'$1 - d\hat{E}_x/d\hat{x}$')
+    plt.xlabel(r'$\hat{x}$')
+    plt.ylabel('Normalized values')
+    plt.legend(loc='best')
+    plt.title('Task 3: Poisson solver verification')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+def dynamicPoissonSolver():
+
+    x = linspace(0, 1, 401, endpoint=False)
+    time = linspace(0, 2*np.pi, 251)
+    
+    q_e = -1.0
+    m_e = 1.0
+    T_e = [0.0, 1.0]
+    
+    nx=len(x)
+    
+    initialNe = initial_ne(x, kx=4, amp=0.01)
+    initialUe = initial_Ue(x)
+    
+    #needs to be concatenated into one array for solve_ivp
+    f0 = concatenate([initialNe, initialUe])
+    
+    
+    for i in range(len(T_e)):
+        #solve the system of equations
+        solution = solve_ivp(evolveFunc, [0, time[-1]], f0, t_eval=time, args=(x,q_e,m_e,T_e[i]))
+        
+        #unpack solution
+        neSol = solution.y[:nx, :].T
+        UeSol = solution.y[:,nx:]
+        
+        
+        #do contour plot of electron density with x on y axis and t on x axis
+        #need to meshgrid x and t for contourf
+        #use time from solution.t to ensure matching dimensions
+        X, T = np.meshgrid(x, solution.t)
+        plt.figure(figsize=(10, 6))
+        contour = plt.contourf(T, X, neSol, levels=50, cmap='viridis')
+        plt.colorbar(contour, label=r'$\hat{n}_e$')
+        plt.xlabel(r'$\hat{t}$')
+        plt.ylabel(r'$\hat{x}$')
+        plt.title('Electron Density Evolution Over Time')
+        plt.tight_layout()
+        plt.show()
+
+
+if __name__ == '__main__':
+    
+    staticPoissonSolver()
+    dynamicPoissonSolver()
 
 

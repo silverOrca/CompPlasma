@@ -51,13 +51,14 @@ def dvdt(curT, curF, q, m, E_x=0, E_y=0):
     v_x = curF[2]
     v_y = curF[3]
     
+    #define variables so code easier to understand
     dx_dt = v_x
     dy_dt = v_y
     
     #need to find what the current B_z is
     B_z = B_func(x, y, x_0, x_c, B_0)
     
-    
+    #equations for for velocity changes with time
     dvx_dt = (q/m) * (v_y * B_z + E_x)
     
     dvy_dt = (q/m) * ((-v_x * B_z) + E_y)
@@ -77,20 +78,9 @@ def B_func(x, y, x_0, x_c, B_0):
     return B_z
 
 
-#to plot anything needed
-def plotting(Bmag):
-    plt.figure()
-    #create the plot      
-    plt.pcolormesh(xx, yy, Bmag.T, shading = 'auto')
-    plt.xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8) 
-    plt.ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
-    #plt.text(-4, -11, r'Figure 1: Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
-    plt.title('Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
-    plt.colorbar(label=r'Magnetic field, $\hat{B}_z(\hat{x}, \hat{y})$, normalised to $B_r$')
 
-
-# #runs the code to output the B_func plot
-def run_B_plot(bPlot=False):
+#runs the code to output the B_func plot
+def run_B_plot():
     
     #fill the empty array with spatially varying B calculated from B_func
     for ix, x in enumerate(xx):
@@ -98,8 +88,13 @@ def run_B_plot(bPlot=False):
             B_z = B_func(x, y, x_0, x_c, B_0)
             Bmag[ix, iy] = B_z
     
-    if bPlot:
-        plotting(Bmag)
+    #create the plot
+    plt.figure()      
+    plt.pcolormesh(xx, yy, Bmag.T, shading = 'auto')
+    plt.xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8) 
+    plt.ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
+    plt.title('Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
+    plt.colorbar(label=r'Magnetic field, $\hat{B}_z(\hat{x}, \hat{y})$, normalised to $B_r$')
     
     return Bmag
 
@@ -162,26 +157,12 @@ def integrate_and_plot(E_x, E_y, B_mag):
         #plot the trajectory - y against x
         trajectory_axis.plot(x, y, label=txt, linewidth=0.5, color=colors[i])
         
-        #create individual plot for each particle
-        # individual_fig = plt.figure()
-        # individual_axis = individual_fig.add_subplot(1, 1, 1)
-        # individual_axis.pcolormesh(xx, yy, B_mag.T, shading='auto', cmap='bone')
-        # individual_axis.plot(x, y, color='blue', linewidth=0.5)
-        # individual_axis.set_xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8)
-        # individual_axis.set_ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
         
         #Calculate trajectory bounds and zoom in with padding
         x_min, x_max = x.min(), x.max()
         y_min, y_max = y.min(), y.max()
         x_padding = (x_max - x_min) * 0.3
         y_padding = (y_max - y_min) * 0.3
-        # individual_axis.set_xlim(x_min - x_padding, x_max + x_padding)
-        # individual_axis.set_ylim(y_min - y_padding, y_max + y_padding)
-        
-        # individual_axis.grid(alpha=0.3)
-        # individual_axis.legend([txt], loc='upper right', fontsize=8)
-        # individual_axis.set_title(f'Particle {i+1} Trajectory (E_x={E_x}, E_y={E_y})')
-        # individual_fig.show()
         
         ax = indTrajax_flat[i]
         ax.pcolormesh(xx, yy, B_mag.T, shading='auto', cmap='bone')
@@ -224,7 +205,7 @@ def integrate_and_plot(E_x, E_y, B_mag):
     
 if __name__ == "__main__":#
 
-    B_mag = run_B_plot(bPlot=True)
+    B_mag = run_B_plot()
     
     electric_fields = asarray([[0.0, 0.0], [0.0, 0.01]])
     

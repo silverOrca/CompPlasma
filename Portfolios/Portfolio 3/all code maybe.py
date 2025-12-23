@@ -158,7 +158,7 @@ def dynamicPoissonSolver():
         
         
         #do contour plot of electron density with x on y axis and t on x axis
-        #need to meshgrid x and t for contourf
+        #need to meshgrid x and t for contourf (map them as coords)
         #use time from solution.t to ensure matching dimensions
         X, T = np.meshgrid(x, solution.t)
         plt.figure(figsize=(10, 6))
@@ -169,6 +169,8 @@ def dynamicPoissonSolver():
         plt.title('Electron Density Evolution Over Time')
         plt.tight_layout()
         plt.show()
+        
+        
 
 
 if __name__ == '__main__':

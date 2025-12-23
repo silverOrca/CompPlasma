@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """
+
 Created on Tue Nov 25 13:40:11 2025
 
 @author: zks524
@@ -20,7 +21,6 @@ from scipy.sparse.linalg import spsolve
 
 from numpy import linspace
 import numpy as np
-from numpy.linalg import det
 
 import matplotlib.pyplot as plt
 
@@ -107,11 +107,12 @@ def main():
         axPlot.legend(loc='lower left')
         axPlot.set_title(fr'Plot for advection speed, $v={value}$')
         axPlot.grid(alpha=0.3)
+        #axPlot.axvspan()
         
-    plt.xlabel(r'$x$') ; plt.ylabel(r'\$')
-    fig.text(0.5, 0.04, r'$x$', fontsize=8, ha='center')
-    fig.text(0.04, 0.5, 'P', va='center', rotation='vertical')
-    fig.suptitle('Pressure against position')
+    fig.text(0.5, 0.04, r'Distance from plasma centre, $x$', fontsize=12, ha='center')
+    fig.text(0.04, 0.5, 'Pressure, P', fontsize=12, va='center', rotation='vertical')
+    fig.text(0.5,0.0, r'Pressure profile given by equation $D\frac{\partial^2P}{\partial x^2} + v\frac{\partial P}{\partial x} + S + RP = 0$', ha='center', fontsize=14)
+    fig.suptitle('Pressure against position from plasma centre for a steady state plasma in a tokamak.', fontsize=16)
     
     plt.show()
 

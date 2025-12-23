@@ -111,8 +111,8 @@ def main():
         
     fig.text(0.5, 0.04, r'Distance from plasma centre, $x$', fontsize=12, ha='center')
     fig.text(0.04, 0.5, 'Pressure, P', fontsize=12, va='center', rotation='vertical')
-    fig.text(0.5,0.0, r'Pressure profile given by equation $D\frac{\partial^2P}{\partial x^2} + v\frac{\partial P}{\partial x} + S + RP = 0$', ha='center', fontsize=14)
-    fig.suptitle('Pressure against position from plasma centre for a steady state plasma in a tokamak.', fontsize=16)
+    fig.text(0.5,0.0, r'Steady state pressure profile given by equation $D\frac{\partial^2P}{\partial x^2} + v\frac{\partial P}{\partial x} + S + RP = 0$', ha='center', fontsize=14)
+    fig.suptitle('Pressure against position from plasma centre for a plasma in a tokamak.', fontsize=16)
     
     plt.show()
 

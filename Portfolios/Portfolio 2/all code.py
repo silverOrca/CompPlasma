@@ -106,6 +106,7 @@ def main():
 
         axPlot.legend(loc='lower left')
         axPlot.set_title(fr'Plot for advection speed, $v={value}$')
+        axPlot.grid(alpha=0.3)
         
     plt.xlabel(r'$x$') ; plt.ylabel(r'\$')
     fig.text(0.5, 0.04, r'$x$', fontsize=8, ha='center')

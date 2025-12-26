@@ -7,13 +7,14 @@ Created on Tue Nov 25 13:40:11 2025
 
 Portfolio 2
 
-- need to put the data into a sparse matrix
+- Solves the advection-diffusion equation for a plasma
+- need to put the data into a sparse matrix to solve as a linear equation
 - solving for rhs vector, rho
 
 
 Plots:
-    - For no R, v=0.2 and v=-0.2 (can use same code and have R set to 0)
     - For v=0.2, varying R
+    - For v=-0.2, varying R, to compare to values for v=0.2
 
 """
 from scipy.sparse import lil_matrix
@@ -23,6 +24,8 @@ from numpy import linspace
 import numpy as np
 
 import matplotlib.pyplot as plt
+
+
 
 
 #length of box
@@ -81,21 +84,28 @@ def return_sparse_matrix(aVal, v, R):
     return M
 
 
+#calls the code to solve the equation and plots
 def main():
+    #figure to compare varying R for both v values
     fig, ax = plt.subplots(2, 1, figsize=(10,10))
     
-    for idx, value in enumerate(v):
-        axPlot = ax[idx]
-        
-        for co in R:
     
+    #iterate over how many v values
+    for idx, value in enumerate(v):
+        #2 v values for 2 plots
+        axPlot = ax[idx]
+        #iterate over R values to plot together
+        for co in R:
+            #get the matrix with boundaries and values satisfying the advection-diffusion equation
             M = return_sparse_matrix(aVal=0.0, v=value, R=co)
         
             #change the format of M from lil to CSR so spsolve can work
             M = M.tocsr()
-             
+            
+            #spsolve solves the sparse linear system: M f = rho for the function f (advection-diffusion eq.)
             solution = spsolve(M, rho)
             
+            #get the error
             rhocheck = M.dot(solution)
             
             #Print the error - use abs for full value and find difference between check (calculated) value and defined value
@@ -103,21 +113,28 @@ def main():
             
             #Plot the solution
             axPlot.plot(xval, solution, '-', label=f'R = {co}')
+                
 
-        axPlot.legend(loc='lower left')
-        axPlot.set_title(fr'Plot for advection speed, $v={value}$')
+        #plotting for Fig 1 of varying R
+        edge_idx = np.argmax(S)
+        axPlot.axvline(x=xval[edge_idx], color='black', linestyle='--', alpha=0.4, label='Tokamak edge')
+        center_idx = np.argmin(S)
+        axPlot.axvline(x=xval[center_idx], color='red', linestyle='--', alpha=0.4, label='Plasma center')
+        axPlot.axvspan(xval[center_idx], xval[edge_idx], color='yellow', alpha=0.1, label='Plasma')
+        axPlot.legend(loc='lower center')
         axPlot.grid(alpha=0.3)
-        #axPlot.axvspan()
+        axPlot.set_title(fr'Plot for advection speed, $v={value}$')
+           
         
     fig.text(0.5, 0.04, r'Distance from plasma centre, $x$', fontsize=12, ha='center')
     fig.text(0.04, 0.5, 'Pressure, P', fontsize=12, va='center', rotation='vertical')
-    fig.text(0.5,0.0, r'Steady state pressure profile given by equation $D\frac{\partial^2P}{\partial x^2} + v\frac{\partial P}{\partial x} + S + RP = 0$', ha='center', fontsize=14)
-    fig.suptitle('Pressure against position from plasma centre for a plasma in a tokamak.', fontsize=16)
+    fig.text(0.5,0.0, r'Fig. 1: Steady state pressure profile for a plasma in a tokamak given by equation: $D\frac{\partial^2P}{\partial x^2} + v\frac{\partial P}{\partial x} + S + RP = 0$', ha='center', fontsize=14)
+    fig.suptitle('Pressure against distance from plasma centre for a plasma in a tokamak.', fontsize=16)
     
     plt.show()
 
 
-
+#run the code
 if __name__ == '__main__':
     main()
 

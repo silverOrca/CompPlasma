@@ -63,7 +63,7 @@ def dvdt(curT, curF, q, m, E_x=0, E_y=0):
     
     dvy_dt = (q/m) * ((-v_x * B_z) + E_y)
     
-    
+    #with solve_ivp solves for x, y, v_x, v_y
     return [dx_dt, dy_dt, dvx_dt, dvy_dt]
     
    
@@ -92,7 +92,7 @@ def run_B_plot():
     plt.figure()      
     plt.pcolormesh(xx, yy, Bmag.T, shading = 'auto')
     plt.xlabel(r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8) 
-    plt.ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-period, $\tau_H$', fontsize=8)
+    plt.ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8)
     plt.title(r'Example $B_{func}$ output showing $B_z$ varying with $\hat{x}$ and $\hat{y}$.')
     plt.colorbar(label=r'Magnetic field, $\hat{B}_z(\hat{x}, \hat{y})$, normalised to $B_r$')
     
@@ -180,23 +180,24 @@ def integrate_and_plot(E_x, E_y, B_mag):
 
     #e_k axes labelling for the main plot
     ek_axis.set_xlabel(r'Time, normalised to the thermal Hydrogen gyro-period, $\tau_H$')
-    ek_axis.set_ylabel(r'Kinetic energy, $\hat{E}_k$, normalised to $\frac{1}{2}m_H\nu_{th,H}^2$')
+    ek_axis.set_ylabel(r'Kinetic energy, $\hat{E}_k$, normalised to $\frac{1}{2}m_Hv_{th,H}^2$')
     ek_axis.legend(loc='center right', bbox_to_anchor=(1.2, -0.4), fontsize=8)
     ek_axis.grid(alpha=0.3)
     ek_axis.set_title('Kinetic energy of particles varying with time over a spatially\nvarying magnetic field and constant electric field.')
     
 
     #plotting start and end of kinetic energy on separate figure to see better
+    #cannot be in above for loop because want to separate by energy and time, not particle
     n_t = len(time)
+    #other end values are just the first and last values of time so don't need defining
     ek_initialEnd = int(n_t * 0.05)  # first 5% to see start
     ek_finalStart = int(n_t * 0.95)  # last 5% to see end
-    
-    #flatten the subplots for easier indexing
-    startEndEkax_flat = startEndEkax.flatten()
     
     #particles 0,1 on left column, particles 2,3 on right column
     particle_groups = [(0, 1), (2, 3)]
     
+    #iterate over the particle groupings to plot on correct axes
+    #plots the time with corresponding energy for the indexes defined (start and end)
     for col, (p1, p2) in enumerate(particle_groups):
         # top row: start of kinetic energy
         ax_start = startEndEkax[0, col]
@@ -216,7 +217,7 @@ def integrate_and_plot(E_x, E_y, B_mag):
     
     #have same x and y axes for all subplots
     startEndEkFig.text(0.5, 0.04, r'Time, normalised to the thermal Hydrogen gyro-period, $\tau_H$', ha='center')
-    startEndEkFig.text(0.04, 0.5, r'Kinetic energy, $\hat{E}_k$, normalised to $\frac{1}{2}m_H\nu_{th,H}^2$', va='center', rotation='vertical')
+    startEndEkFig.text(0.04, 0.5, r'Kinetic energy, $\hat{E}_k$, normalised to $\frac{1}{2}m_Hv_{th,H}^2$', va='center', rotation='vertical')
     startEndEkFig.suptitle(r'Start and End of Kinetic Energy with $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r')')
 
     #trajectory axes labelling
@@ -224,13 +225,13 @@ def integrate_and_plot(E_x, E_y, B_mag):
     trajectory_axis.set_ylabel(r'$\hat{y}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', fontsize=8)
     trajectory_axis.grid(alpha=0.3)
     trajectory_axis.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), fontsize=8)
-    trajectory_axis.set_title(r'Trajectories of particles over the background magnetic field with\nelectric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $\nu_{th,H}B_r$.')
+    trajectory_axis.set_title('Trajectories of particles over the background magnetic field with\nelectric field, $\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $v_{th,H}B_r$.')
     #choosing B colour to better see the trajectories
     im = trajectory_axis.pcolormesh(xx, yy, B_mag.T, shading = 'auto', cmap='bone')
     trajectory_plot.colorbar(im, ax=trajectory_axis, label=r'Magnetic field, $\hat{B}_z(\hat{x}, \hat{y})$, normalised to $B_r$')
     
     #individual plots of trajectory labelling
-    indTrajFig.suptitle(r'Individual trajectories of particles over the background magnetic field with electric field,\n$\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $\nu_{th,H}B_r$.')
+    indTrajFig.suptitle('Individual trajectories of particles over the background magnetic field with electric field,\n$\hat{E}$ (x, y) = ('+str(E_x)+', '+str(E_y)+r'), normalised to $v_{th,H}B_r$.')
     indTrajFig.text(0.5, 0.04, r'$\hat{x}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', ha='center')
     indTrajFig.text(0.04, 0.5, r'$\hat{y}$, normalised to thermal Hydrogen gyro-radius, $\rho_H$', va='center', rotation='vertical')
     indTrajFig.legend(loc='lower center', bbox_to_anchor=(0.45,-0.15), fontsize=8)
@@ -249,9 +250,10 @@ if __name__ == "__main__":#
     #get the background magnetic field values
     B_mag = run_B_plot()
     
+    #define the bg electric fields we want to solve for
     electric_fields = asarray([[0.0, 0.0], [0.0, 0.01]])
     
-    #iterate over each electric field
+    #iterate over each electric field and solve
     for i in range(len(electric_fields)):
         integrate_and_plot(electric_fields[i][0], electric_fields[i][1], B_mag)
     

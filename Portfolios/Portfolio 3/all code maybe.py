@@ -84,8 +84,8 @@ def evolveFunc(curT, curF, x, q_e, m_e, T_e):
     nx = len(x)
     
     #set out the variables
-    ne = curF[:nx]
-    Ue = curF[nx:]
+    ne = curF[:nx] # electron density
+    Ue = curF[nx:] # electron flow
     
     #solve for electric field
     eField = solvePoisson(x, ne)
@@ -119,10 +119,11 @@ def staticPoissonSolver():
     plt.plot(x, ne, color='green', label=r'$\hat{n}_e$')
     plt.plot(x, eField, 'r-', label=r'$\hat{E}_x$')
     plt.plot(x, 1-dEdx, '--', color='orange', label=r'$1 - d\hat{E}_x/d\hat{x}$')
-    plt.xlabel(r'$\hat{x}$')
-    plt.ylabel('Normalized values')
+    plt.xlabel(r'Position, $\hat{x}$')
+    plt.ylabel('Normalised values')
     plt.legend(loc='best')
-    plt.title('Task 3: Poisson solver verification')
+    plt.title('Poisson solver verification, for constant electron density and flow.')
+    plt.text(0.5, -2.0, 'Fig. 1: Plot of electron density, $\hat{n}_e$, normalised to the plasma density, $n_s$; electric field, $\hat{E}_x$, normalised to the Debye length over plasma\ntemperature, $\lambda_D / T_p$, and 1 - the rate of change of electric field with position, all against position, $\hat{x}$, normalised to the Debye length, $\lambda_D$.\nValues are for a 1-dimensional periodic plasma modelled as a fluid with no net flow and no magnetic field.', ha='center')
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
@@ -130,7 +131,7 @@ def staticPoissonSolver():
 
 
 
-def dynamicPoissonSolver():
+def dynamicPoissonSolver(integrationMethod = 'RK45'):
 
     x = linspace(0, 1, 401, endpoint=False)
     time = linspace(0, 2*np.pi, 251)
@@ -147,10 +148,13 @@ def dynamicPoissonSolver():
     #needs to be concatenated into one array for solve_ivp
     f0 = concatenate([initialNe, initialUe])
     
+    #store solutions for different temperatures
+    neSolutions = []
+    UeSolutions = []
     
-    for i in range(len(T_e)):
+    for i, temp in enumerate(T_e):
         #solve the system of equations
-        solution = solve_ivp(evolveFunc, [0, time[-1]], f0, t_eval=time, args=(x,q_e,m_e,T_e[i]))
+        solution = solve_ivp(evolveFunc, [0, time[-1]], f0, method = integrationMethod, t_eval=time, args=(x,q_e,m_e,T_e[i]))
         
         #unpack solution
         neSol = solution.y[:nx, :].T
@@ -163,19 +167,93 @@ def dynamicPoissonSolver():
         X, T = np.meshgrid(x, solution.t)
         plt.figure(figsize=(10, 6))
         contour = plt.contourf(T, X, neSol, levels=50, cmap='viridis')
-        plt.colorbar(contour, label=r'$\hat{n}_e$')
-        plt.xlabel(r'$\hat{t}$')
-        plt.ylabel(r'$\hat{x}$')
-        plt.title('Electron Density Evolution Over Time')
+        plt.colorbar(contour, label=r'Electron density, $\hat{n}_e$, normalised to the plasma density, $n_s$')
+        plt.xlabel(r'Time, $\hat{t}$, normalised to the electron plasma frequency, $\omega_{pe}$')
+        plt.ylabel(r'Position, $\hat{x}$, normalised to the Debye length, $\lambda_D$')
+        plt.title('Electron Density Evolution Over Time for $\hat{T}_e =$ '+str(temp))
+        
         plt.tight_layout()
         plt.show()
         
+        #print the highest value and lowest value of electron density overall
+        print(f'Integration method: {integrationMethod}')
+        print(f'For Te = {temp}, max ne = {np.max(neSol)}, min ne = {np.min(neSol)}')
         
+
+        # #plot contour graph of electron flow against position and time
+        # X, T = np.meshgrid(x, solution.t)
+        # plt.figure(figsize=(10, 6))
+        # contour = plt.contourf(T, X, UeSol, levels=50, cmap='viridis')
+        # plt.colorbar(contour, label=r'Electron flow, $\hat{U}_e$, normalised to the electron thermal velocity, $v_{Te}$')
+        # plt.xlabel(r'Time, $\hat{t}$, normalised to the electron plasma frequency, $\omega_{pe}$')
+        # plt.ylabel(r'Position, $\hat{x}$, normalised to the Debye length, $\lambda_D$')
+        # plt.title('Electron Flow Evolution Over Time for $\hat{T}_e =$ '+str(temp))
+
+        # plt.tight_layout()
+        # plt.show()
+
+        #append solutions to lists to return
+        neSolutions.append(neSol)
+        UeSolutions.append(UeSol)
+
+    return neSolutions
+        
+#compare the final electron density for the two methods and two temperatures on same figure        
+def compareMethods(neSolutions):
+    #splits the values up into separate variables for clarity
+    #variables are arrays of electron density with time and position with shape (time, position)
+    Te0Ne_RK45 = neSolutions[0][0]  # Te=0.0 solution for RK45
+    Te0Ne_Radau = neSolutions[1][0]  # Te=0.0 solution for Radau
+    Te1Ne_RK45 = neSolutions[0][1]  # Te=1.0 solution for RK45
+    Te1Ne_Radau = neSolutions[1][1]  # Te=1.0 solution for Radau 
+    #need to define x again
+    x = linspace(0, 1, 401, endpoint=False)
+
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6))
+    
+    coldAx = ax[0]
+    #plots last value of the electron density for all positions
+    coldAx.plot(x, Te0Ne_RK45[-1, :], label='RK45', linestyle='-')
+    coldAx.plot(x, Te0Ne_Radau[-1, :], label='Radau', linestyle='--')
+    coldAx.set_title('Comparison of Final Electron Density Profiles for Different Integration Methods (Te=0.0)')
+    coldAx.grid(alpha=0.3)
+    coldAx.legend()
+    
+    warmAx = ax[1]
+    #does the same for Te=1.0
+    warmAx.plot(x, Te1Ne_RK45[-1, :], label='RK45', linestyle='-')
+    warmAx.plot(x, Te1Ne_Radau[-1, :], label='Radau', linestyle='--')
+    warmAx.set_title('Comparison of Final Electron Density Profiles for Different Integration Methods (Te=1.0)')
+    warmAx.grid(alpha=0.3)
+    warmAx.legend()
+    
+    fig.text(0.5, -0.01, r'Position, $\hat{x}$, normalised to the Debye length, $\lambda_D$', ha='center')
+    fig.text(-0.02, 0.5, r'Final Electron Density, $\hat{n}_e$, normalised to the plasma density, $n_s$', va='center', rotation='vertical')
+    
+    plt.tight_layout()
+    plt.show()
+
+    print(np.shape(Te0Ne_RK45), np.shape(Te0Ne_Radau))
+    
 
 
 if __name__ == '__main__':
     
     staticPoissonSolver()
-    dynamicPoissonSolver()
+    
+    methods = ['RK45', 'Radau']
+
+    #store solutions for different methods
+    #2d arrays, first index is method, second is temperature
+    neSolutions = []
+    
+    #use different integration methods for solve_ivp to compare results
+    for method in methods:
+        neSol = dynamicPoissonSolver(integrationMethod = method)
+        #appends different temperature solutions for each method
+        neSolutions.append(neSol)
+
+    
+    compareMethods(neSolutions)
 
 
